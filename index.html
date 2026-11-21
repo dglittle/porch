@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6efe1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#211b17" media="(prefers-color-scheme: dark)">
+<meta name="description" content="A pocket tuner and drummer for porch jams. Tune up, count in, play.">
+<title>Porch · tune up, count in, play</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥁</text></svg>">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --paper: #f6efe1;
+    --paper-deep: #efe5d0;
+    --card: #fffaf0;
+    --ink: #4a3728;
+    --ink-soft: #7d6a58;
+    --terracotta: #c1553d;
+    --terracotta-deep: #a03f2b;
+    --sage: #7a8c5f;
+    --sage-deep: #5f7048;
+    --honey: #e0a458;
+    --line: #d9cbb2;
+    --cell: #e7dcc5;
+    --glow: #fdf8ec;
+    --on-color: #fffaf0;
+    --tabs-h: 58px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #211b17;
+      --paper-deep: #2b231e;
+      --card: #2a221d;
+      --ink: #eadfcb;
+      --ink-soft: #a89782;
+      --terracotta: #d2674e;
+      --terracotta-deep: #b4503a;
+      --sage: #8ea272;
+      --sage-deep: #6f8556;
+      --honey: #d99a4c;
+      --line: #43372e;
+      --cell: #3a2f27;
+      --glow: #2e2620;
+    }
+  }
+
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+    background: radial-gradient(1200px 500px at 50% -100px, var(--glow) 0%, var(--paper) 60%), var(--paper);
+    color: var(--ink);
+    min-height: 100vh; min-height: 100dvh;
+    padding: 14px 12px calc(var(--tabs-h) + 22px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust: 100%;
+  }
+
+  header { text-align: center; margin-bottom: 10px; }
+  h1 { font-size: 1.7em; margin: 0; font-weight: normal; letter-spacing: 0.5px; }
+  .tagline { color: var(--ink-soft); font-style: italic; margin: 2px 0 0; font-size: 0.95em; }
+
+  main { max-width: 560px; margin: 0 auto; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  button {
+    font-family: inherit; color: inherit; cursor: pointer; border: none;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--honey); outline-offset: 2px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 3px 0 rgba(74,55,40,0.08);
+  }
+
+  /* ------------------------------- tabs ------------------------------- */
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    display: flex; gap: 8px; justify-content: center;
+    padding: 7px 12px calc(7px + env(safe-area-inset-bottom));
+    background: var(--paper-deep); border-top: 1px solid var(--line);
+  }
+  .tab {
+    flex: 1; max-width: 240px; height: 44px; border-radius: 999px;
+    background: transparent; font-size: 1.08em; color: var(--ink-soft);
+  }
+  .tab.selected { background: var(--ink); color: var(--paper); }
+  .tab .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; background: transparent; vertical-align: middle; }
+  .tab.live .dot { background: var(--terracotta); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  /* ------------------------------- chips ------------------------------ */
+  .chips {
+    display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; margin: 0 -12px; padding-left: 12px; padding-right: 12px;
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none; background: var(--paper-deep); border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 15px; font-size: 0.95em; white-space: nowrap;
+  }
+  .chip.selected { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  /* ------------------------------- drum ------------------------------- */
+  .beat-card { position: relative; padding: 12px 44px 12px; text-align: center; margin-bottom: 12px; }
+  .beat-name { font-size: 1.45em; line-height: 1.2; }
+  .beat-story { font-style: italic; color: var(--ink-soft); margin-top: 3px; line-height: 1.35; }
+  .beat-meta { color: var(--ink-soft); font-size: 0.9em; margin-top: 6px; }
+  .strum-hint { margin-top: 6px; font-size: 0.98em; color: var(--sage-deep); line-height: 1.35; }
+  #shareBtn {
+    position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; border-radius: 50%;
+    background: transparent; font-size: 1.05em; opacity: 0.75;
+  }
+
+  .main-buttons { display: flex; gap: 12px; justify-content: center; margin-bottom: 8px; }
+  .big {
+    font-size: 1.25em; padding: 13px 26px; border-radius: 999px; color: var(--on-color);
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
+  }
+  .big:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.3) !important; }
+  #playBtn { flex: 1.3; max-width: 230px; background: var(--sage-deep); box-shadow: 0 4px 0 #48563a; }
+  #playBtn.playing { background: #b0563f; box-shadow: 0 4px 0 #8d4230; }
+  #newBeatBtn { flex: 1; max-width: 200px; background: var(--terracotta-deep); box-shadow: 0 4px 0 #7e2f1f; }
+  #newBeatBtn.rolling .dice { display: inline-block; animation: roll 0.45s ease; }
+  @keyframes roll { to { transform: rotate(360deg); } }
+
+  .bars { display: flex; gap: 7px; justify-content: center; align-items: center; height: 22px; margin-bottom: 6px; color: var(--ink-soft); font-size: 0.9em; }
+  .bars i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); transition: transform 0.08s; }
+  .bars i.now { background: var(--terracotta); transform: scale(1.35); }
+  .bars i.fill { border-radius: 2px; transform: rotate(45deg); }
+  .bars i.fill.now { transform: rotate(45deg) scale(1.35); }
+  .bars b { font-weight: normal; font-size: 1.25em; color: var(--terracotta); min-width: 1em; text-align: center; }
+
+  .grid {
+    display: grid; grid-template-columns: 34px repeat(var(--steps, 16), minmax(0, 1fr));
+    gap: 3px; padding: 8px 8px 10px 4px; margin-bottom: 12px; touch-action: pan-y;
+  }
+  .ruler-cell { text-align: center; font-size: 0.78em; color: var(--ink-soft); height: 18px; line-height: 18px; border-radius: 5px; }
+  .ruler-cell.now { background: var(--ink); color: var(--paper); }
+  .inst-label { background: none; font-size: 1.25em; padding: 0; height: 40px; border-radius: 8px; position: relative; }
+  .inst-label span { display: none; }
+  .inst-label.muted { opacity: 0.3; }
+  .inst-label.muted::after { content: ""; position: absolute; left: 4px; right: 4px; top: 50%; border-top: 2px solid var(--ink); transform: rotate(-20deg); }
+  .cell { position: relative; border-radius: 6px; background: var(--cell); height: 40px; padding: 0; touch-action: pan-y; }
+  .cell.beat-start { margin-left: 3px; }
+  .cell.on { background: var(--honey); }
+  .cell.accent { background: var(--terracotta); }
+  .cell.on::after, .cell.accent::after {
+    content: ""; position: absolute; inset: 0; margin: auto; width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255,250,240,0.85);
+  }
+  .cell.accent::after { width: 11px; height: 11px; }
+  .cell.now { box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .cell.now.on, .cell.now.accent { filter: brightness(1.2); transform: scale(1.08); }
+  .cell.ghost { background: var(--sage); }
+  .row-muted { opacity: 0.35; }
+
+  .knobs { padding: 10px 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 10px 12px; align-items: center; }
+  .knobs label { color: var(--ink-soft); }
+  .knobs output, #tapBtn { min-width: 3.6em; text-align: right; font-variant-numeric: tabular-nums; }
+  #tapBtn { background: var(--paper-deep); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; font-size: 0.95em; text-align: center; }
+  #tapBtn small { display: block; font-size: 0.7em; color: var(--ink-soft); }
+  .toggles { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+  .toggle { background: var(--paper-deep); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 0.92em; color: var(--ink-soft); }
+  .toggle[aria-pressed="true"] { color: var(--ink); border-color: var(--sage); }
+  .toggle::before { content: "○ "; }
+  .toggle[aria-pressed="true"]::before { content: "● "; color: var(--sage-deep); }
+
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; margin: 0; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--line); }
+  input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--line); }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%;
+    background: var(--terracotta); border: 3px solid var(--card); box-shadow: 0 1px 3px rgba(74,55,40,0.4);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 50%; background: var(--terracotta);
+    border: 3px solid var(--card); box-shadow: 0 1px 3px rgba(74,55,40,0.4);
+  }
+
+  .hint { color: var(--ink-soft); font-size: 0.88em; text-align: center; line-height: 1.55; margin: 14px 6px 0; }
+  .keys { display: none; }
+
+  /* ------------------------------- tune ------------------------------- */
+  .tuner { padding: 12px 12px 10px; }
+  .listen { position: relative; }
+  .ruler { position: relative; height: 62px; margin: 2px 0 0; }
+  .ruler::before { content: ""; position: absolute; left: 0; right: 0; bottom: 9px; border-top: 2px solid var(--line); }
+  .string {
+    position: absolute; top: 0; transform: translateX(-50%); width: 40px; height: 40px; border-radius: 50%;
+    background: var(--paper-deep); border: 1.5px solid var(--line); font-size: 1.1em; padding: 0;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  }
+  .string::after { content: ""; position: absolute; left: 50%; top: 100%; height: 12px; border-left: 2px solid var(--line); }
+  .string sub { font-size: 0.55em; color: var(--ink-soft); vertical-align: baseline; }
+  .string.near { border-color: var(--ink); transform: translateX(-50%) scale(1.08); }
+  .string.locked { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .string.locked sub { color: var(--paper); }
+  .string.tuned { background: var(--sage); border-color: var(--sage-deep); color: #fffaf0; }
+  .string.tuned sub { color: #fffaf0; }
+  .string.tuned.locked { box-shadow: 0 0 0 3px var(--ink); }
+  #marker {
+    position: absolute; bottom: 3px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
+    background: var(--terracotta); border: 2px solid var(--card); opacity: 0; transition: opacity 0.2s; z-index: 1;
+  }
+  #marker.on { opacity: 1; }
+  #marker.good { background: var(--sage-deep); }
+
+  .readout { display: flex; align-items: center; justify-content: center; gap: 16px; height: 96px; }
+  .note { font-size: 4.6em; line-height: 1; min-width: 1.5em; text-align: right; transition: color 0.15s; }
+  .note sub { font-size: 0.3em; color: var(--ink-soft); vertical-align: baseline; margin-left: 2px; }
+  .note.good { color: var(--sage-deep); }
+  .note.idle { color: var(--line); }
+  .read-side { min-width: 9.5em; text-align: left; }
+  #cents { font-size: 1.5em; font-variant-numeric: tabular-nums; }
+  #verdict { color: var(--ink-soft); font-size: 0.98em; min-height: 1.3em; }
+  #verdict.good { color: var(--sage-deep); }
+  #hz { color: var(--ink-soft); font-size: 0.8em; font-variant-numeric: tabular-nums; min-height: 1.2em; }
+
+  #trace { display: block; width: 100%; height: clamp(190px, 36vh, 330px); border-radius: 10px; background: var(--paper-deep); }
+  .tune-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; margin-top: 8px; }
+  #tuneTip { color: var(--ink-soft); font-size: 0.9em; line-height: 1.35; }
+  #tuneTip u { cursor: pointer; color: var(--ink); }
+  #micStop { flex: none; background: var(--paper-deep); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 0.9em; }
+
+  .mic-gate {
+    position: absolute; inset: -4px; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 20px; text-align: center; border-radius: 10px; background: var(--card);
+    background: color-mix(in srgb, var(--card) 86%, transparent);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  }
+  .mic-gate[hidden] { display: none; }
+  #micStart { background: var(--sage-deep); box-shadow: 0 4px 0 #48563a; }
+  .mic-gate p { margin: 0; color: var(--ink-soft); font-size: 0.95em; line-height: 1.45; max-width: 21em; }
+  .mic-gate p.err { color: var(--terracotta-deep); }
+
+  #allTuned {
+    display: block; width: 100%; margin-top: 12px; padding: 14px; border-radius: 14px; font-size: 1.1em;
+    background: var(--sage-deep); color: #fffaf0; box-shadow: 0 4px 0 #48563a;
+  }
+  #allTuned[hidden] { display: none; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: calc(var(--tabs-h) + 26px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
+    background: var(--ink); color: var(--paper); padding: 9px 18px; border-radius: 999px; font-size: 0.95em;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 9; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  footer { margin-top: 18px; color: var(--ink-soft); font-size: 0.88em; text-align: center; line-height: 1.6; }
+  footer a { color: inherit; }
+  footer .heart { color: var(--terracotta); }
+
+  /* a laptop gets both at once, side by side */
+  @media (min-width: 900px) {
+    body { padding: 26px 24px 40px; }
+    h1 { font-size: 2.3em; }
+    main { max-width: 1120px; display: grid; grid-template-columns: 380px 1fr; gap: 28px; align-items: start; margin-top: 18px; }
+    .panel { display: block; }
+    .tabs { display: none; }
+    #toast { bottom: 30px; }
+    .chips { flex-wrap: wrap; overflow: visible; margin: 0; padding: 2px 0 10px; }
+    .grid { grid-template-columns: 132px repeat(var(--steps, 16), minmax(0, 1fr)); gap: 5px; padding: 12px 14px 14px 10px; }
+    .inst-label { font-size: 0.95em; text-align: left; white-space: nowrap; }
+    .inst-label span { display: inline; margin-left: 6px; }
+    .inst-label.muted::after { right: 14px; transform: none; }
+    .cell.beat-start { margin-left: 5px; }
+    .keys { display: inline; }
+    #trace { height: 260px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🥁 Porch</h1>
+  <p class="tagline">tune up, count in, play</p>
+</header>
+
+<main>
+  <section class="panel" id="tune" aria-label="Tuner">
+    <div class="chips" id="tuningChips"></div>
+    <div class="card tuner">
+      <div class="ruler" id="ruler"><div id="marker"></div></div>
+      <div class="listen">
+      <div class="readout">
+        <div class="note idle" id="note">–</div>
+        <div class="read-side">
+          <div id="cents">&nbsp;</div>
+          <div id="verdict">pluck a string</div>
+          <div id="hz"></div>
+        </div>
+      </div>
+      <canvas id="trace"></canvas>
+      <div class="tune-foot">
+        <div id="tuneTip"></div>
+        <button id="micStop">◼ Mic off</button>
+      </div>
+      <div class="mic-gate" id="micGate">
+        <button class="big" id="micStart">🎙 Start tuner</button>
+        <p id="micMsg">It listens through the microphone to hear your strings. The sound never leaves this device. Or tap a string above and tune by ear.</p>
+      </div>
+      </div>
+    </div>
+    <button id="allTuned" hidden>All in tune ✓ &nbsp; Go play →</button>
+  </section>
+
+  <section class="panel" id="drum" aria-label="Drummer">
+    <div class="card beat-card">
+      <button id="shareBtn" title="Share this beat" aria-label="Share this beat">🔗</button>
+      <div class="beat-name" id="beatName">…</div>
+      <div class="beat-story" id="beatStory"></div>
+      <div class="beat-meta" id="beatMeta"></div>
+      <div class="strum-hint" id="strumHint"></div>
+    </div>
+
+    <div class="main-buttons">
+      <button class="big" id="playBtn">▶ Play</button>
+      <button class="big" id="newBeatBtn"><span class="dice">🎲</span> New beat</button>
+    </div>
+    <div class="bars" id="bars"></div>
+
+    <div class="chips" id="styleChips"></div>
+
+    <div class="card grid" id="grid"></div>
+
+    <div class="card knobs">
+      <label for="tempo">Tempo</label>
+      <input type="range" id="tempo" min="40" max="200" value="96">
+      <button id="tapBtn" title="Tap in time to set the tempo"><span id="tempoOut">96</span><small>tap</small></button>
+      <label for="swing">Swing</label>
+      <input type="range" id="swing" min="0" max="70" value="0">
+      <output id="swingOut">0%</output>
+      <label for="volume">Volume</label>
+      <input type="range" id="volume" min="0" max="100" value="80">
+      <output id="volumeOut">80</output>
+      <div class="toggles">
+        <button class="toggle" id="countInBtn" aria-pressed="true">Count-in</button>
+        <button class="toggle" id="fillsBtn" aria-pressed="true">Fill every 4th bar</button>
+      </div>
+    </div>
+
+    <p class="hint">
+      Tap squares to add hits, twice for an accent; drag to paint. Tap an instrument to hush it.
+      <span class="keys"><br><b>Space</b> plays and stops · <b>N</b> rolls a new beat · <b>T</b> starts the tuner · <b>←/→</b> nudge the tempo</span>
+    </p>
+  </section>
+</main>
+
+<nav class="tabs" id="tabs">
+  <button class="tab" data-tab="tune">🎸 Tune<span class="dot"></span></button>
+  <button class="tab" data-tab="drum">🥁 Drum<span class="dot"></span></button>
+</nav>
+
+<div id="toast" role="status"></div>
+
+<footer>
+  Made for jamming with Mom <span class="heart">♥</span><br>
+  <a href="https://github.com/dglittle/porch">how it works</a>
+</footer>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+
+/* ---------------------------------- audio ---------------------------------- */
+// One AudioContext for everything, made on the first tap (browsers insist).
+// The drums and the tuner take turns: a microphone would hear the drums, and on
+// iOS an open microphone makes the speaker quiet and thin.
+
+let ac = null;
+let kit = null;
+
+function ensureAudio() {
+  if (!ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ac = new AC({ latencyHint: "interactive" });
+    kit = makeKit(ac, ac.destination);
+    kit.master.gain.value = volumeToGain(volumeSlider.value);
+    // iOS unlock: play a silent blip inside the gesture
+    const silent = ac.createBufferSource();
+    silent.buffer = ac.createBuffer(1, 1, ac.sampleRate);
+    silent.connect(ac.destination);
+    silent.start(0);
+    audioSession("playback");
+    // iOS pauses the context for a call, an alarm, or when the microphone lets go; pick it back up
+    ac.onstatechange = () => { if (ac.state !== "running" && ac.state !== "closed" && (isPlaying || mic)) ac.resume().catch(() => {}); };
+  }
+  if (ac.state !== "running") ac.resume();   // covers iOS's "interrupted" state too
+  return ac;
+}
+
+// Tell iOS what kind of sound this is. "playback" keeps the drums audible with
+// the ringer switch off; "play-and-record" is needed while the mic is open.
+function audioSession(type) {
+  try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (e) {}
+}
+
+function volumeToGain(v) { return Math.pow(v / 100, 1.5) * 1.1; }
+
+// The kit is built on whatever context it's given, so the same voices play live
+// and render offline (the tests listen to it that way).
+function makeKit(ctx, dest) {
+  const rate = ctx.sampleRate;
+  const noiseBuffer = ctx.createBuffer(1, rate * 2, rate);
+  const nd = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+  const compressor = ctx.createDynamicsCompressor();
+  compressor.threshold.value = -14;
+  compressor.knee.value = 20;
+  compressor.ratio.value = 3;
+  compressor.attack.value = 0.003;
+  compressor.release.value = 0.25;
+
+  const master = ctx.createGain();
+  const bus = ctx.createGain();
+
+  // a little generated room so it doesn't sound like a lab
+  const room = ctx.createConvolver();
+  const len = Math.floor(rate * 1.4);
+  const impulse = ctx.createBuffer(2, len, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = impulse.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+  }
+  room.buffer = impulse;
+  const send = ctx.createGain();
+  send.gain.value = 0.18;
+
+  bus.connect(master);
+  bus.connect(send).connect(room).connect(master);
+  // a soft ceiling: straight up to 0.7, then leaning over, so a kick landing on an
+  // accent at full volume rounds off instead of clipping
+  const trim = ctx.createGain();
+  trim.gain.value = 1 / 1.5;
+  const ceiling = ctx.createWaveShaper();
+  const curve = new Float32Array(1025);
+  for (let i = 0; i < curve.length; i++) {
+    const u = (i / 512 - 1) * 1.5, a = Math.abs(u);
+    curve[i] = a <= 0.7 ? u : Math.sign(u) * (0.7 + 0.28 * Math.tanh((a - 0.7) / 0.28));
+  }
+  ceiling.curve = curve;
+  master.connect(compressor).connect(trim).connect(ceiling).connect(dest);
+
+  function noise(t, dur) {
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer;
+    src.loop = true;
+    src.start(t, Math.random() * 1.5);   // a different grain every hit
+    src.stop(t + dur);
+    return src;
+  }
+  function tone(type, t, dur) {
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.start(t); o.stop(t + dur);
+    return o;
+  }
+  function env(t, peak, attack, decay) {
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peak, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
+    return g;
+  }
+  function filter(type, freq, q) {
+    const f = ctx.createBiquadFilter();
+    f.type = type; f.frequency.value = freq;
+    if (q) f.Q.value = q;
+    return f;
+  }
+
+  /* --- the voices: (time, velocity, where to). Soft, woody, brushy on purpose. --- */
+  const play = {
+    kick(t, v, out) {
+      const o = tone("sine", t, 0.32);
+      o.frequency.setValueAtTime(105, t);
+      o.frequency.exponentialRampToValueAtTime(43, t + 0.09);
+      o.connect(env(t, 0.95 * v, 0.005, 0.295)).connect(out || bus);
+      // a phone speaker can't play 43 Hz, so add a knock it can
+      const k = tone("triangle", t, 0.1);
+      k.frequency.setValueAtTime(230, t);
+      k.frequency.exponentialRampToValueAtTime(95, t + 0.05);
+      k.connect(env(t, 0.3 * v, 0.003, 0.08)).connect(out || bus);
+    },
+    brush(t, v, out) {
+      // swishy brushed snare: bandpassed noise + a faint drum body
+      noise(t, 0.22).connect(filter("bandpass", 1700, 0.6)).connect(env(t, 0.5 * v, 0.012, 0.18)).connect(out || bus);
+      const o = tone("triangle", t, 0.1);
+      o.frequency.value = 185;
+      o.connect(env(t, 0.14 * v, 0.002, 0.09)).connect(out || bus);
+    },
+    stick(t, v, out) {
+      // cross-stick "tock"
+      const o = tone("sine", t, 0.06);
+      o.frequency.value = 760;
+      o.connect(env(t, 0.4 * v, 0.001, 0.05)).connect(out || bus);
+      noise(t, 0.04).connect(filter("bandpass", 1900, 5)).connect(env(t, 0.5 * v, 0.001, 0.03)).connect(out || bus);
+    },
+    hat(t, v, out) {
+      noise(t, 0.06).connect(filter("highpass", 7200)).connect(env(t, 0.28 * v, 0.001, 0.05)).connect(out || bus);
+    },
+    shaker(t, v, out) {
+      noise(t, 0.12).connect(filter("bandpass", 5300, 1.4)).connect(env(t, 0.35 * v, 0.02, 0.08)).connect(out || bus);
+    },
+    tamb(t, v, out) {
+      // two quick jingle bursts
+      for (let i = 0; i < 2; i++) {
+        const tt = t + i * 0.021;
+        noise(tt, 0.18).connect(filter("highpass", 6800)).connect(filter("bandpass", 7900, 3.5))
+          .connect(env(tt, (i ? 0.17 : 0.26) * v, 0.008, 0.15)).connect(out || bus);
+      }
+    },
+  };
+
+  // A plucked string (Karplus-Strong) for the tuner's reference notes.
+  const plucks = {};
+  function pluck(freq, t) {
+    let buf = plucks[freq];
+    if (!buf) {
+      // the loop is a two-tap average (half a sample of delay) plus a fractional
+      // delay, so the whole trip is exactly one period and the note is in tune
+      const n = Math.floor(rate * 2.2), period = rate / freq, p = Math.floor(period - 0.5), frac = period - 0.5 - p;
+      buf = plucks[freq] = ctx.createBuffer(1, n, rate);
+      const d = buf.getChannelData(0);
+      let lp = 0;
+      for (let i = 0; i < p + 2; i++) { lp += 0.45 * ((Math.random() * 2 - 1) - lp); d[i] = lp; }  // a soft thumb, not a pick
+      const damp = Math.pow(0.001, period / (rate * 2.5)) * 0.5;       // -60 dB in about 2.5 s
+      for (let i = p + 2; i < n; i++) {
+        const a = d[i - p] * (1 - frac) + d[i - p - 1] * frac;
+        const b = d[i - p - 1] * (1 - frac) + d[i - p - 2] * frac;
+        d[i] = damp * (a + b);
+      }
+      let peak = 0;
+      for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(d[i]));
+      for (let i = 0; i < n; i++) d[i] *= (1 - i / n) / peak;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = 0.8;
+    src.connect(g).connect(bus);
+    src.start(t);
+  }
+
+  return { play, pluck, master, bus };
+}
+
+const INSTRUMENTS = [
+  { id: "kick",   name: "Kick",        icon: "🪘" },
+  { id: "brush",  name: "Brush Snare", icon: "🧹" },
+  { id: "stick",  name: "Cross-Stick", icon: "🥢" },
+  { id: "hat",    name: "Hi-Hat",      icon: "🎩" },
+  { id: "shaker", name: "Shaker",      icon: "🌾" },
+  { id: "tamb",   name: "Tambourine",  icon: "🔔" },
+];
+
+/* ---------------------------------- pitch ---------------------------------- */
+// (test/pitch.test.js lifts everything between the two pitch markers into Node)
+// <pitch>
+//
+// The McLeod pitch method: the "normalized square difference function" is 1 at a
+// lag where the wave matches itself and -1 where it's upside down. Take the first
+// tall peak (not the tallest: a wave matches itself at two periods too) and
+// interpolate around it. To keep it cheap enough to run every frame on a phone,
+// find the peak on a 4x-shrunk copy first, then refine it at full rate.
+function makePitchDetector() {
+  let x = new Float32Array(0), small = new Float32Array(0), nsdf = new Float32Array(0);
+
+  function nsdfAt(a, n, lag) {
+    let acf = 0, m = 0;
+    for (let i = 0, e = n - lag; i < e; i++) {
+      const p = a[i], q = a[i + lag];
+      acf += p * q;
+      m += p * p + q * q;
+    }
+    return m > 0 ? 2 * acf / m : 0;
+  }
+  // the top of the parabola through three points: [offset from the middle, height]
+  function vertex(y0, y1, y2) {
+    const d = y0 - 2 * y1 + y2;
+    if (d >= 0 || y1 < y0 || y1 < y2) return [0, y1];
+    const off = 0.5 * (y0 - y2) / d;
+    return [off, y1 - 0.25 * (y0 - y2) * off];
+  }
+
+  // buf: mono samples; returns { freq, clarity (0..1), rms } or null if no pitch
+  return function detect(buf, rate, fmin, fmax) {
+    const n = buf.length;
+    if (x.length !== n) { x = new Float32Array(n); small = new Float32Array(n); nsdf = new Float32Array(n); }
+    let mean = 0;
+    for (let i = 0; i < n; i++) mean += buf[i];
+    mean /= n;
+    let ss = 0;
+    for (let i = 0; i < n; i++) { const v = buf[i] - mean; x[i] = v; ss += v * v; }
+    const rms = Math.sqrt(ss / n);
+    if (!(rms > 1e-5)) return null;
+
+    const D = Math.max(1, Math.floor(rate / 11000));
+    const nd = Math.floor(n / D);
+    for (let i = 0; i < nd; i++) {
+      let s = 0;
+      for (let j = 0; j < D; j++) s += x[i * D + j];
+      small[i] = s / D;
+    }
+    const rd = rate / D;
+    const lagMax = Math.min(Math.ceil(rd / fmin), Math.floor(nd / 2));
+    const lagMin = Math.max(2, Math.floor(rd / fmax));
+    for (let lag = 1; lag <= lagMax + 1; lag++) nsdf[lag] = nsdfAt(small, nd, lag);
+
+    let lag = 1, top = 0, peaks = [];
+    while (lag <= lagMax && nsdf[lag] > 0) lag++;          // walk off the hill at lag 0
+    for (; lag <= lagMax; lag++) {
+      const y = nsdf[lag];
+      if (y > 0 && y >= nsdf[lag - 1] && y > nsdf[lag + 1] && lag >= lagMin) {
+        peaks.push(lag);
+        if (y > top) top = y;
+      }
+    }
+    if (!peaks.length) return null;
+    const coarse = peaks.find(l => nsdf[l] >= 0.9 * top);
+    const center = Math.round((coarse + vertex(nsdf[coarse - 1], nsdf[coarse], nsdf[coarse + 1])[0]) * D);
+
+    let [period, clarity] = fine(center, D + 1);
+    // the shrunk copy is too coarse to see a very short period, so it can land on
+    // two or three of them; at full rate, see if a half or a third fits as well
+    for (let k = 2; k <= 3; k++) {
+      if (rate / (period / k) > fmax * 1.03) break;
+      const [p, c] = fine(Math.round(period / k), 1);
+      if (c >= 0.9 * clarity) { period = p; clarity = c; k = 1; }
+    }
+    return { freq: rate / period, clarity: Math.min(1, clarity), rms };
+
+    function fine(mid, radius) {
+      let best = mid, bestY = -2;
+      for (let l = Math.max(2, mid - radius); l <= mid + radius; l++) {
+        const y = nsdfAt(x, n, l);
+        if (y > bestY) { bestY = y; best = l; }
+      }
+      const before = nsdfAt(x, n, best - 1), after = nsdfAt(x, n, best + 1);
+      if (bestY < before || bestY < after) return [best, -1];        // a slope, not a peak
+      const [off, top] = vertex(before, bestY, after);
+      return [best + off, top];
+    }
+  };
+}
+
+const NOTE_NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+const midiToFreq = m => 440 * Math.pow(2, (m - 69) / 12);
+const freqToMidi = f => 69 + 12 * Math.log2(f / 440);       // fractional: 0.01 is one cent
+const noteName = m => NOTE_NAMES[((m % 12) + 12) % 12];
+const noteOctave = m => Math.floor(m / 12) - 1;
+// </pitch>
+
+/* -------------------------------- the beats -------------------------------- */
+
+// Everything about a beat grows from one seed, so a link can carry it.
+let rng = Math.random;
+function seeded(seed) {           // mulberry32
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function emptyRow(steps) { return new Array(steps).fill(0); }
+function chance(p) { return rng() < p; }
+function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+function randInt(lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+
+const ADJECTIVES = [
+  "Dusty", "Amber", "Rambling", "Lazy", "Crooked", "Golden", "Whistling",
+  "Muddy", "Rusty", "Wandering", "Sleepy", "Bramble", "Clover", "Maple",
+  "Sundown", "Freight", "Hushpuppy", "Firefly", "Chickadee", "Huckleberry"
+];
+const NOUNS = [
+  "Creek", "Porch", "Wagon", "Holler", "Meadow", "Junction", "Cider",
+  "Sparrow", "Lantern", "Fiddle", "Biscuit", "Prairie", "Switchback",
+  "Thicket", "Caboose", "Orchard", "Bootheel", "Mockingbird", "Gravel Road", "Moonshine"
+];
+// every beat is a fable: "in which <somebody> <does something in the beat's own gait>"
+const SOMEBODY = [
+  "a sleepy mule", "two crickets", "the mail carrier", "a one-eyed rooster", "somebody's uncle",
+  "a patient heron", "the church organist", "a barn cat", "three hens", "a borrowed banjo",
+  "the whole choir", "a stray dog", "Grandpa's left boot", "a pair of swallows",
+  "the neighbor's goat", "an old screen door", "a very small frog", "the last firefly"
+];
+
+/*
+ Each style builds a one-bar pattern.
+ Cells: 0 = rest, 1 = hit, 2 = accent.
+ steps/perBeat define the meter: 16/4 = 4/4 in 16ths, 12/4 = 3/4 in 16ths,
+ 12/6 = 6/8 counted in two big pulses.
+*/
+const STYLES = [
+  {
+    id: "train", name: "Train Beat", meterLabel: "4/4",
+    steps: 16, perBeat: 4, tempo: [88, 118], swing: [12, 30],
+    strum: "🎸 Flatpick it: boom-chicka boom-chicka. Try G, C and D",
+    does: ["races the 5:15 freight to the crossing", "rides the rails clear to morning",
+      "keeps time for a train that never stops here", "counts boxcars all the way to the caboose",
+      "outruns the rain by half a mile"],
+    build(steps) {
+      const p = {};
+      const brush = emptyRow(steps);
+      for (let i = 0; i < steps; i += 2) brush[i] = (i % 4 === 2) ? 2 : 1; // chug with offbeat accents
+      for (let i = 1; i < steps; i += 2) if (chance(0.3)) brush[i] = 1;    // little "a" ticks
+      p.brush = brush;
+
+      const kick = emptyRow(steps);
+      kick[0] = 2;
+      if (chance(0.9)) kick[8] = 1;
+      if (chance(0.25)) kick[14] = 1;
+      p.kick = kick;
+
+      const shaker = emptyRow(steps);
+      if (chance(0.4)) for (let i = 0; i < steps; i += 4) shaker[i] = 1;
+      p.shaker = shaker;
+
+      const tamb = emptyRow(steps);
+      if (chance(0.25)) { tamb[4] = 1; tamb[12] = 1; }
+      p.tamb = tamb;
+      return p;
+    }
+  },
+  {
+    id: "boomchick", name: "Boom-Chick", meterLabel: "4/4",
+    steps: 16, perBeat: 4, tempo: [80, 112], swing: [0, 0],
+    strum: "🎸 Bass note on the boom, strum on the chick: D _ DU _",
+    does: ["walks to town and back, in no hurry", "taps a boot on the bottom step",
+      "learns two chords and uses them both", "saws a little wood before supper",
+      "sweeps the porch one board at a time"],
+    build(steps) {
+      const p = {};
+      const kick = emptyRow(steps);
+      kick[0] = 2; kick[8] = 1;
+      if (chance(0.3)) kick[10] = 1;
+      else if (chance(0.3)) kick[14] = 1;
+      p.kick = kick;
+
+      const useStick = chance(0.35);
+      const back = emptyRow(steps);
+      back[4] = chance(0.35) ? 2 : 1; back[12] = 1;
+      p[useStick ? "stick" : "brush"] = back;
+
+      const hat = emptyRow(steps);
+      if (chance(0.65)) for (let i = 0; i < steps; i += 2) hat[i] = 1;
+      p.hat = hat;
+
+      const shaker = emptyRow(steps);
+      if (chance(0.45)) for (let i = 0; i < steps; i += 2) shaker[i] = (i % 4 === 0) ? 1 : 0;
+      if (chance(0.3)) shaker[6] = 1;
+      p.shaker = shaker;
+      return p;
+    }
+  },
+  {
+    id: "waltz", name: "Front-Porch Waltz", meterLabel: "3/4",
+    steps: 12, perBeat: 4, tempo: [84, 132], swing: [0, 0],
+    strum: "🎸 One-two-three: bass, chuck, chuck. Lovely with Am and C",
+    does: ["waltzes with the broom when nobody's looking", "takes three steps around the kitchen",
+      "asks the moon for the last dance", "turns slow circles in the yard",
+      "sways with the laundry on the line"],
+    build(steps) {
+      const p = {};
+      const kick = emptyRow(steps);
+      kick[0] = 2;
+      p.kick = kick;
+
+      const useStick = chance(0.3);
+      const back = emptyRow(steps);
+      back[4] = 1; back[8] = 1;
+      if (chance(0.3)) back[4] = 2;
+      p[useStick ? "stick" : "brush"] = back;
+
+      const shaker = emptyRow(steps);
+      if (chance(0.5)) for (let i = 0; i < steps; i += 2) shaker[i] = 1;
+      p.shaker = shaker;
+
+      const tamb = emptyRow(steps);
+      if (chance(0.35)) tamb[8] = 1;
+      p.tamb = tamb;
+
+      const hat = emptyRow(steps);
+      if (chance(0.25)) { hat[2] = 1; hat[6] = 1; hat[10] = 1; }
+      p.hat = hat;
+      return p;
+    }
+  },
+  {
+    id: "shuffle", name: "Back-Porch Shuffle", meterLabel: "4/4 swung",
+    steps: 16, perBeat: 4, tempo: [78, 112], swing: [52, 66], swingEighths: true,
+    strum: "🎸 Lazy swung strums: D _ du D _ du. Try E, A7 and B7",
+    does: ["drags one heel all the way home", "leans on the fence and takes its time",
+      "strolls in late and nobody minds", "skips every other puddle",
+      "whistles through the gap in the gate"],
+    build(steps) {
+      const p = {};
+      const kick = emptyRow(steps);
+      kick[0] = 2; kick[8] = 1;
+      if (chance(0.4)) kick[6] = 1;
+      p.kick = kick;
+
+      const back = emptyRow(steps);
+      back[4] = 1; back[12] = chance(0.4) ? 2 : 1;
+      p.brush = back;
+
+      const hat = emptyRow(steps);
+      for (let i = 0; i < steps; i += 2) hat[i] = (i % 4 === 0) ? 2 : 1;
+      p.hat = hat;
+
+      const shaker = emptyRow(steps);
+      if (chance(0.3)) { shaker[2] = 1; shaker[10] = 1; }
+      p.shaker = shaker;
+      return p;
+    }
+  },
+  {
+    id: "sixeight", name: "6/8 Lullaby", meterLabel: "6/8",
+    steps: 12, perBeat: 6, tempo: [46, 62], swing: [0, 0],
+    strum: "🎸 Slow rolling arpeggios, one chord per big pulse. Em is gorgeous",
+    does: ["rocks the porch swing till the stars come out", "hums the baby down to sleep",
+      "rows a slow boat across the pond", "counts fireflies and loses track",
+      "watches the lamp burn low"],
+    build(steps) {
+      const p = {};
+      const kick = emptyRow(steps);
+      kick[0] = 2;
+      if (chance(0.35)) kick[10] = 1;
+      p.kick = kick;
+
+      const useStick = chance(0.5);
+      const back = emptyRow(steps);
+      back[6] = chance(0.4) ? 2 : 1;
+      p[useStick ? "stick" : "brush"] = back;
+
+      const shaker = emptyRow(steps);
+      for (let i = 0; i < steps; i += 2) shaker[i] = 1;
+      if (chance(0.4)) { shaker[0] = 2; shaker[6] = 2; }
+      p.shaker = shaker;
+
+      const tamb = emptyRow(steps);
+      if (chance(0.3)) tamb[6] = 1;
+      p.tamb = tamb;
+      return p;
+    }
+  },
+  {
+    id: "hambone", name: "Hambone", meterLabel: "4/4",
+    steps: 16, perBeat: 4, tempo: [84, 108], swing: [0, 14],
+    strum: "🎸 Shave-and-a-haircut: chuck the muted strings, land on one big E",
+    does: ["knocks on every door on the street", "claps for a parade of one",
+      "pats out the news on a knee", "answers back from the far side of the creek",
+      "rattles the gate until somebody dances"],
+    build(steps) {
+      const p = {};
+      const knock = emptyRow(steps);                       // the 3-2 knock: 1 . . a . . & . | . . & . 4 . . .
+      [0, 3, 6, 10, 12].forEach((s, i) => { knock[s] = i === 0 || i === 3 ? 2 : 1; });
+      const useStick = chance(0.5);
+      p[useStick ? "stick" : "brush"] = knock;
+
+      const kick = emptyRow(steps);
+      kick[0] = 2; kick[6] = 1;
+      if (chance(0.6)) kick[12] = 1;
+      p.kick = kick;
+
+      const shaker = emptyRow(steps);
+      for (let i = 0; i < steps; i += 2) shaker[i] = 1;
+      if (chance(0.5)) for (let i = 1; i < steps; i += 2) shaker[i] = 1;
+      p.shaker = shaker;
+
+      const tamb = emptyRow(steps);
+      if (chance(0.4)) { tamb[10] = 1; tamb[12] = 1; }
+      p.tamb = tamb;
+      return p;
+    }
+  },
+  {
+    id: "porch", name: "Porch Groove", meterLabel: "4/4",
+    steps: 16, perBeat: 4, tempo: [84, 106], swing: [8, 24],
+    strum: "🎸 The old faithful: D DU UDU. Capo optional",
+    does: ["pours the lemonade and pulls up a chair", "sings along without knowing the words",
+      "watches the afternoon go by", "nods along from the rocking chair",
+      "waves at every passing truck"],
+    build(steps) {
+      const p = {};
+      const kick = emptyRow(steps);
+      kick[0] = 2;
+      if (chance(0.55)) kick[7] = 1; else kick[8] = 1;
+      if (chance(0.35)) kick[10] = 1;
+      p.kick = kick;
+
+      const useStick = chance(0.4);
+      const back = emptyRow(steps);
+      back[4] = 1; back[12] = 1;
+      p[useStick ? "stick" : "brush"] = back;
+
+      const shaker = emptyRow(steps);
+      for (let i = 0; i < steps; i += 2) shaker[i] = (i % 4 === 0) ? 2 : 1;
+      if (chance(0.45)) for (let i = 1; i < steps; i += 4) shaker[i] = 1;
+      p.shaker = shaker;
+
+      const hat = emptyRow(steps);
+      if (chance(0.35)) { hat[2] = 1; hat[6] = 1; hat[10] = 1; hat[14] = 1; }
+      p.hat = hat;
+
+      const tamb = emptyRow(steps);
+      if (chance(0.2)) { tamb[4] = 1; tamb[12] = 1; }
+      p.tamb = tamb;
+      return p;
+    }
+  },
+];
+
+/* ------------------------------- app state --------------------------------- */
+
+const grid = $("grid"), playBtn = $("playBtn"), newBeatBtn = $("newBeatBtn");
+const tempoSlider = $("tempo"), swingSlider = $("swing"), volumeSlider = $("volume");
+
+// little things worth remembering between visits
+let prefs = { tab: "drum", tuning: "guitar", volume: 80, countIn: true, fills: true, last: "" };
+try { Object.assign(prefs, JSON.parse(localStorage.getItem("porch") || "{}")); } catch (e) {}
+function savePrefs() { try { localStorage.setItem("porch", JSON.stringify(prefs)); } catch (e) {} }
+
+let pattern = null;          // { style, seed, title, story, steps, perBeat, cells: {instId: [..]} }
+let muted = {};
+let cellEls = [];            // [instIdx][step] -> element
+let rulerEls = [];
+let selectedStyleId = "surprise";
+
+/* ------------------------------- generation -------------------------------- */
+
+function makeBeat(styleId, seed) {
+  const style = STYLES.find(s => s.id === styleId) || STYLES[Math.floor(Math.random() * STYLES.length)];
+  if (seed == null) seed = Math.floor(Math.random() * 0xFFFFFFF);
+  rng = seeded(seed);
+  const title = pick(ADJECTIVES) + " " + pick(NOUNS);
+  const story = "in which " + pick(SOMEBODY) + " " + pick(style.does) + ".";
+  const cells = {};
+  INSTRUMENTS.forEach(inst => { cells[inst.id] = emptyRow(style.steps); });
+  Object.assign(cells, style.build(style.steps));
+  const beat = {
+    style, seed, title, story, cells, steps: style.steps, perBeat: style.perBeat,
+    tempo: randInt(style.tempo[0], style.tempo[1]), swing: randInt(style.swing[0], style.swing[1]),
+  };
+  rng = Math.random;
+  return beat;
+}
+
+// A beat fits in a link: style.seed.tempo.swing.rows (each row is a base-3 number, in base 36).
+// The seed brings back the name and the story; the rows carry whatever you changed by hand.
+function encodeBeat() {
+  const rows = INSTRUMENTS.map(inst => parseInt(pattern.cells[inst.id].join(""), 3).toString(36));
+  return [pattern.style.id, pattern.seed.toString(36), tempoSlider.value, swingSlider.value, rows.join("-")].join(".");
+}
+function decodeBeat(text) {
+  const [styleId, seed, tempo, swing, rows] = String(text).replace(/^#/, "").split(".");
+  if (!STYLES.some(s => s.id === styleId) || !/^[0-9a-z]{1,7}$/.test(seed || "")) return null;
+  const beat = makeBeat(styleId, parseInt(seed, 36));
+  if (tempo >= 40 && tempo <= 200) beat.tempo = Math.round(tempo);
+  if (swing >= 0 && swing <= 70) beat.swing = Math.round(swing);
+  const parts = (rows || "").split("-");
+  if (parts.length === INSTRUMENTS.length && parts.every(r => /^[0-9a-z]{1,6}$/.test(r))) {
+    INSTRUMENTS.forEach((inst, i) => {
+      const digits = parseInt(parts[i], 36).toString(3).padStart(beat.steps, "0");
+      if (digits.length === beat.steps) beat.cells[inst.id] = digits.split("").map(Number);
+    });
+  }
+  return beat;
+}
+
+function setBeat(beat) {
+  pattern = beat;
+  tempoSlider.value = beat.tempo;
+  swingSlider.value = beat.swing;
+  muted = {};
+  if (step >= pattern.steps) step = 0;      // a 4/4 playhead can be past the end of a waltz
+  $("beatName").textContent = "“" + pattern.title + "”";
+  $("beatStory").textContent = pattern.story;
+  $("strumHint").textContent = pattern.style.strum;
+  updateOutputs();
+  buildGrid();
+  drawBars(-9, 0);
+  remember();
+}
+
+function newBeat() { setBeat(makeBeat(selectedStyleId)); }
+
+// keep the address bar pointing at this exact beat
+function remember() {
+  if (!pattern) return;
+  prefs.last = encodeBeat();
+  savePrefs();
+  try { history.replaceState(null, "", "#" + prefs.last); } catch (e) {}
+}
+
+function updateOutputs() {
+  $("tempoOut").textContent = tempoSlider.value;
+  $("swingOut").textContent = swingSlider.value + "%";
+  $("volumeOut").textContent = volumeSlider.value;
+  if (pattern) $("beatMeta").textContent = pattern.style.name + " · " + pattern.style.meterLabel + " · " + tempoSlider.value + " bpm";
+}
+
+/* --------------------------------- grid ui --------------------------------- */
+
+function buildGrid() {
+  grid.innerHTML = "";
+  grid.style.setProperty("--steps", pattern.steps);
+  cellEls = [];
+  rulerEls = [];
+  lastDrawn = null;
+
+  grid.appendChild(document.createElement("div"));
+  for (let s = 0; s < pattern.steps; s++) {
+    const r = document.createElement("div");
+    r.className = "ruler-cell";
+    if (s % pattern.perBeat === 0) r.textContent = (s / pattern.perBeat + 1);
+    grid.appendChild(r);
+    rulerEls.push(r);
+  }
+
+  INSTRUMENTS.forEach((inst, idx) => {
+    const label = document.createElement("button");
+    label.className = "inst-label";
+    label.title = inst.name + ": tap to hush";
+    label.setAttribute("aria-label", inst.name);
+    label.append(inst.icon);
+    label.appendChild(document.createElement("span")).textContent = inst.name;
+    label.addEventListener("click", () => {
+      muted[inst.id] = !muted[inst.id];
+      label.classList.toggle("muted", muted[inst.id]);
+      cellEls[idx].forEach(c => c.classList.toggle("row-muted", muted[inst.id]));
+    });
+    grid.appendChild(label);
+
+    cellEls[idx] = [];
+    for (let s = 0; s < pattern.steps; s++) {
+      const cell = document.createElement("button");
+      cell.className = "cell";
+      cell.tabIndex = -1;
+      cell.dataset.i = idx;
+      cell.dataset.s = s;
+      if (s % pattern.perBeat === 0 && s !== 0) cell.classList.add("beat-start");
+      showCell(cell, pattern.cells[inst.id][s]);
+      grid.appendChild(cell);
+      cellEls[idx].push(cell);
+    }
+  });
+}
+
+function showCell(cell, val) {
+  cell.classList.toggle("on", val === 1);
+  cell.classList.toggle("accent", val === 2);
+}
+
+// Tap a square to step it rest -> hit -> accent -> rest; drag on to paint the same
+// along the row. A finger that turns out to be scrolling the page takes it all back.
+let stroke = null;
+function strokeTo(cell) {
+  if (!cell || stroke.old.has(cell)) return;
+  const inst = INSTRUMENTS[cell.dataset.i], s = +cell.dataset.s;
+  stroke.old.set(cell, pattern.cells[inst.id][s]);
+  pattern.cells[inst.id][s] = stroke.value;
+  showCell(cell, stroke.value);
+  if (stroke.value && !isPlaying && cell === stroke.first) {
+    kit.play[inst.id](ac.currentTime + 0.005, stroke.value === 2 ? 1.15 : 0.8);
+  }
+}
+grid.addEventListener("pointerdown", e => {
+  const cell = e.target.closest(".cell");
+  if (!cell || !e.isPrimary || e.button) return;
+  ensureAudio();
+  const cur = pattern.cells[INSTRUMENTS[cell.dataset.i].id][+cell.dataset.s];
+  stroke = { id: e.pointerId, first: cell, value: (cur + 1) % 3, old: new Map() };
+  if (e.pointerType === "mouse") { e.preventDefault(); strokeTo(cell); }
+});
+grid.addEventListener("pointermove", e => {
+  if (!stroke || e.pointerId !== stroke.id) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const cell = el && el.closest(".cell");
+  if (cell && cell !== stroke.first) { strokeTo(stroke.first); strokeTo(cell); }
+});
+function endStroke(e, keep) {
+  if (!stroke || e.pointerId !== stroke.id) return;
+  if (keep) { ensureAudio(); strokeTo(stroke.first); }   // (a finger lifting counts as a gesture on iOS; one landing doesn't)
+  else stroke.old.forEach((val, cell) => {
+    pattern.cells[INSTRUMENTS[cell.dataset.i].id][+cell.dataset.s] = val;
+    showCell(cell, val);
+  });
+  stroke = null;
+  remember();
+}
+window.addEventListener("pointerup", e => endStroke(e, true));
+window.addEventListener("pointercancel", e => endStroke(e, false));
+
+/* ------------------------------- transport --------------------------------- */
+// Notes are booked on the audio clock a little ahead of time, so a busy screen
+// can't make the drummer stumble. A bar of -1 is the count-in.
+
+let isPlaying = false;
+let step = 0, bar = 0;
+let nextTime = 0;
+let schedulerTimer = null;
+let session = null;          // this run's own volume knob, so Stop can hush notes already booked
+let drawQueue = [];
+let lastDrawn = null;
+let stats = { steps: 0, late: 0, worstLate: 0 };   // for the tests: did any note get booked after its time?
+
+// little turnarounds for the last beat of every fourth bar: [16th, instrument, velocity]
+const FILLS = [
+  [[0, "brush", 0.55], [1, "brush", 0.7], [2, "brush", 0.85], [3, "brush", 1.1]],
+  [[0, "stick", 0.8], [2, "stick", 0.9], [3, "brush", 1.05]],
+  [[0, "tamb", 0.8], [2, "tamb", 0.9], [3, "kick", 0.8]],
+  [[0, "brush", 0.8], [2, "brush", 0.7], [3, "brush", 1.0]],
+  [[0, "stick", 0.8], [2, "stick", 1.0]],        // the last two sit on a shuffle too
+  [[0, "brush", 0.7], [2, "brush", 1.05]],
+];
+const FILL_LEN = 4;
+let fill = { bar: -1, shape: FILLS[0] };
+
+function stepDuration() { return 60 / Number(tempoSlider.value) / pattern.perBeat; }
+
+// what sounds on this step: [[instrument id, velocity], ...]
+function hitsAt(bar, step) {
+  const out = [];
+  if (bar < 0) {                                            // count-in: sticks on the beats
+    const every = pattern.perBeat === 6 ? 2 : pattern.perBeat;   // 6/8 counts all six
+    if (step % every === 0) out.push(["stick", step % pattern.perBeat === 0 ? 1.15 : 0.75]);
+    return out;
+  }
+  const filling = prefs.fills && bar % 4 === 3 && step >= pattern.steps - FILL_LEN;
+  if (filling) {
+    if (fill.bar !== bar) {
+      const shapes = pattern.style.swingEighths ? FILLS.slice(4) : FILLS;
+      fill = { bar, shape: shapes[Math.floor(Math.random() * shapes.length)] };
+    }
+    fill.shape.forEach(([at, id, vel]) => {
+      if (at === step - (pattern.steps - FILL_LEN) && !muted[id]) out.push([id, vel, true]);
+    });
+  }
+  INSTRUMENTS.forEach(inst => {
+    const val = pattern.cells[inst.id][step];
+    if (!val || muted[inst.id]) return;
+    if (filling && inst.id !== "kick" && inst.id !== "shaker") return;   // the fill takes over the hands
+    out.push([inst.id, val === 2 ? 1.15 : 0.8]);
+  });
+  return out;
+}
+
+function swingDelay(step) {
+  // shuffle styles delay the off-8ths toward the triplet (66 is a true triplet
+  // shuffle); other styles get a lighter push on the off-16ths
+  const amt = Number(swingSlider.value) / 100, dur = stepDuration();
+  if (pattern.style.swingEighths) return step % 4 === 2 ? amt * dur : 0;
+  return step % 2 === 1 ? amt * dur * 0.85 : 0;
+}
+
+function scheduleStep(bar, step, time, k, out) {
+  const t = time + swingDelay(step);
+  const hits = hitsAt(bar, step);
+  hits.forEach(([id, vel]) => {
+    const jitter = step === 0 ? 0 : (Math.random() - 0.5) * 0.004;      // humanize the timing
+    k.play[id](t + jitter, vel * (0.94 + Math.random() * 0.12), out);   // and the touch
+  });
+  return { bar, step, time: t, ghosts: hits.filter(h => h[2]).map(h => h[0]) };
+}
+
+function scheduler() {
+  const now = ac.currentTime;
+  if (nextTime < now - 0.1) nextTime = now + 0.05;      // the tab slept: skip ahead, don't machine-gun the backlog
+  // a hidden tab only gets a timer about once a second, so book further ahead there
+  const until = now + (document.hidden ? 1.6 : 0.12);
+  while (nextTime < until) {
+    stats.steps++;
+    if (nextTime < now) { stats.late++; stats.worstLate = Math.max(stats.worstLate, now - nextTime); }
+    drawQueue.push(scheduleStep(bar, step, nextTime, kit, session));
+    nextTime += stepDuration();
+    if (++step >= pattern.steps) { step = 0; bar++; }
+  }
+}
+
+function drawBars(bar, step) {
+  const el = $("bars");
+  if (bar === -1) {                                      // count out loud
+    const every = pattern.perBeat === 6 ? 2 : pattern.perBeat;
+    el.innerHTML = "";
+    el.appendChild(document.createElement("b")).textContent = Math.floor(step / every) + 1;
+    return;
+  }
+  if (el.children.length !== 4) el.innerHTML = "<i></i><i></i><i></i><i></i>";
+  [...el.children].forEach((dot, i) => {
+    dot.className = (i === 3 && prefs.fills ? "fill" : "") + (bar >= 0 && i === bar % 4 ? " now" : "");
+  });
+}
+
+function drawStep(ev) {
+  if (lastDrawn) {
+    cellEls.forEach(row => row[lastDrawn.step] && row[lastDrawn.step].classList.remove("now", "ghost"));
+    if (rulerEls[lastDrawn.step]) rulerEls[lastDrawn.step].classList.remove("now");
+  }
+  lastDrawn = ev;
+  if (!ev) return;
+  if (rulerEls[ev.step]) rulerEls[ev.step].classList.add("now");
+  if (ev.bar >= 0) cellEls.forEach(row => row[ev.step] && row[ev.step].classList.add("now"));
+  ev.ghosts.forEach(id => {
+    const row = cellEls[INSTRUMENTS.findIndex(inst => inst.id === id)];
+    if (row && row[ev.step]) row[ev.step].classList.add("ghost");
+  });
+  drawBars(ev.bar, ev.step);
+}
+
+function drawPlayhead() {
+  // show a step when you hear it, which is a little after it leaves the browser
+  const heard = ac.currentTime - (ac.outputLatency || 0);
+  let latest = null;
+  while (drawQueue.length && drawQueue[0].time <= heard) latest = drawQueue.shift();
+  if (latest) drawStep(latest);
+}
+
+function startPlaying() {
+  ensureAudio();
+  stopTuner();
+  audioSession("playback");
+  isPlaying = true;
+  step = 0;
+  bar = prefs.countIn ? -1 : 0;
+  session = ac.createGain();
+  session.connect(kit.bus);
+  nextTime = ac.currentTime + 0.06;
+  drawQueue = [];
+  schedulerTimer = setInterval(scheduler, 25);
+  scheduler();
+  playBtn.textContent = "◼ Stop";
+  playBtn.classList.add("playing");
+  refresh();
+}
+
+function stopPlaying() {
+  if (!isPlaying) return;
+  isPlaying = false;
+  clearInterval(schedulerTimer);
+  const old = session;
+  old.gain.setTargetAtTime(0, ac.currentTime, 0.012);
+  setTimeout(() => old.disconnect(), 2500);
+  drawQueue = [];
+  drawStep(null);
+  drawBars(-9, 0);
+  playBtn.textContent = "▶ Play";
+  playBtn.classList.remove("playing");
+  refresh();
+}
+
+function togglePlay() { if (isPlaying) stopPlaying(); else startPlaying(); }
+
+// tap along on the tempo number to set it
+let taps = [];
+function tapTempo() {
+  const now = performance.now();
+  if (taps.length && now - taps[taps.length - 1] > 2000) taps = [];
+  taps.push(now);
+  if (taps.length > 6) taps.shift();
+  if (taps.length < 2) return;
+  const beat = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
+  tempoSlider.value = clamp(Math.round(60000 / beat), 40, 200);
+  updateOutputs();
+  remember();
+}
+
+/* ---------------------------------- tuner ---------------------------------- */
+
+const TUNINGS = [
+  { id: "guitar",   name: "Guitar",            notes: [40, 45, 50, 55, 59, 64] },
+  { id: "ukulele",  name: "Ukulele",           notes: [60, 64, 67, 69] },
+  { id: "mandolin", name: "Mandolin · Fiddle", notes: [55, 62, 69, 76] },
+  { id: "banjo",    name: "Banjo",             notes: [50, 55, 59, 62, 67] },
+  { id: "bass",     name: "Bass",              notes: [28, 33, 38, 43], long: true },   // low notes need a longer listen
+  { id: "any",      name: "Any note",          notes: [] },
+];
+const IN_TUNE = 5;           // cents either side that count as in tune
+const TRACE_SECONDS = 4;
+
+const detect = makePitchDetector();
+const ruler = $("ruler"), marker = $("marker"), trace = $("trace"), noteEl = $("note");
+let tuning = TUNINGS.find(t => t.id === prefs.tuning) || TUNINGS[0];
+let mic = null;              // { stream, source, analyser, sink } while listening
+let micTicket = 0;           // bumps whenever the mic is started or stopped, so a slow "allow?" can't start it late
+let locked = null;           // the string you tapped (a MIDI note), or null to follow whatever is nearest
+let tuned = new Set();
+let trail = [];              // { t, m (fractional MIDI note) } for the trace
+let recent = [];             // the last few readings, for a steady number
+let quietUntil = 0;          // don't listen to our own reference note
+let goodSince = 0, lastHeard = 0, lastText = 0, frameNo = 0;
+let samples = null;
+let lastReading = null;      // for the tests
+
+function setTuning(t) {
+  tuning = t;
+  prefs.tuning = t.id;
+  savePrefs();
+  locked = null;
+  tuned = new Set();
+  trail = []; recent = [];
+  $("allTuned").hidden = true;
+  [...$("tuningChips").children].forEach(c => c.classList.toggle("selected", c.dataset.id === t.id));
+  buildStrings();
+  showIdle();
+}
+
+// The strings sit along a ruler where distance is pitch, and a bead slides along
+// it to show where the note you're playing is. Far off? You can see which way.
+function rulerSpan() {
+  const lo = Math.min(...tuning.notes) - 2.5, hi = Math.max(...tuning.notes) + 2.5;
+  return [lo, hi];
+}
+function buildStrings() {
+  ruler.querySelectorAll(".string").forEach(el => el.remove());
+  ruler.style.display = tuning.notes.length ? "" : "none";
+  if (!tuning.notes.length) return showTip();
+  const [lo, hi] = rulerSpan();
+  const sorted = [...tuning.notes].sort((a, b) => a - b);
+  let gap = Infinity;
+  for (let i = 1; i < sorted.length; i++) gap = Math.min(gap, sorted[i] - sorted[i - 1]);
+  const size = clamp(Math.floor(gap / (hi - lo) * (ruler.clientWidth || 330)) - 5, 30, 44);
+  sorted.forEach(m => {
+    const b = document.createElement("button");
+    b.className = "string";
+    b.dataset.m = m;
+    b.style.left = (m - lo) / (hi - lo) * 100 + "%";
+    b.style.width = b.style.height = size + "px";
+    b.style.top = (44 - size) + "px";
+    b.title = "Hear " + noteName(m) + noteOctave(m) + " and lock on to it";
+    b.append(noteName(m));
+    b.appendChild(document.createElement("sub")).textContent = noteOctave(m);
+    b.addEventListener("click", () => {
+      ensureAudio();
+      locked = m;
+      kit.pluck(midiToFreq(m), ac.currentTime + 0.01);
+      quietUntil = performance.now() + 1900;
+      recent = [];
+      showStrings(null);
+    });
+    ruler.appendChild(b);
+  });
+  showStrings(null);
+}
+function showStrings(near) {
+  ruler.querySelectorAll(".string").forEach(el => {
+    const m = +el.dataset.m;
+    el.classList.toggle("near", m === near);
+    el.classList.toggle("locked", m === locked);
+    el.classList.toggle("tuned", tuned.has(m));
+  });
+  showTip();
+}
+function showTip() {
+  const tip = $("tuneTip");
+  if (locked != null) tip.innerHTML = "Locked on " + noteName(locked) + noteOctave(locked) + ". <u>Let go</u>";
+  else if (!tuning.notes.length) tip.textContent = "Sing, whistle or play any note.";
+  else tip.textContent = "Tap a string to hear it and lock on.";
+}
+$("tuneTip").addEventListener("click", () => { if (locked != null) { locked = null; showStrings(null); } });
+
+function showIdle() {
+  noteEl.textContent = "–";
+  noteEl.className = "note idle";
+  $("cents").innerHTML = "&nbsp;";
+  $("verdict").textContent = mic ? (tuning.notes.length ? "pluck a string" : "play a note") : "";
+  $("verdict").className = "";
+  $("hz").textContent = "";
+  marker.className = "";
+  showStrings(null);
+}
+
+async function startTuner() {
+  if (mic) return;
+  const ticket = ++micTicket;
+  const gate = $("micMsg");
+  const fail = text => { gate.textContent = text; gate.className = "err"; audioSession("playback"); };
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return fail("This browser won't share a microphone with this page (it has to be served over https). You can still tap a string and tune by ear.");
+  }
+  stopPlaying();
+  ensureAudio();
+  audioSession("play-and-record");
+  gate.className = "";
+  gate.textContent = "Waiting for the microphone…";
+  let stream;
+  try {
+    // the phone's call-quality cleanup (echo, noise, auto-gain) mangles a held note; ask for the raw sound
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
+    });
+  } catch (err) {
+    if (ticket !== micTicket) return;
+    if (err.name === "NotAllowedError" || err.name === "SecurityError") {
+      return fail("The microphone is blocked for this page. Allow it in the browser's site settings (the icon beside the address), then try again. Or tap a string and tune by ear.");
+    }
+    if (err.name === "NotFoundError") return fail("No microphone found. You can still tap a string and tune by ear.");
+    return fail("The microphone wouldn't start (" + (err.message || err.name) + "). Try again?");
+  }
+  if (ticket !== micTicket) { stream.getTracks().forEach(t => t.stop()); return; }   // you moved on while the browser was asking
+  if (ac.state !== "running") { try { await ac.resume(); } catch (e) {} }
+  const source = ac.createMediaStreamSource(stream);
+  const analyser = ac.createAnalyser();
+  analyser.fftSize = 8192;
+  // A string's pitch lives below a couple of kHz; most of a microphone's hiss lives
+  // above. Filtering it off keeps the reading steady as the note fades (about 5x steadier).
+  const rumble = ac.createBiquadFilter();
+  rumble.type = "highpass"; rumble.frequency.value = 40;
+  const hiss = ac.createBiquadFilter();
+  hiss.type = "lowpass"; hiss.frequency.value = 2500;
+  const sink = ac.createGain();            // silent, but some browsers only run what reaches the speaker
+  sink.gain.value = 0;
+  source.connect(rumble).connect(hiss).connect(analyser).connect(sink).connect(ac.destination);
+  stream.getTracks()[0].addEventListener("ended", stopTuner);
+  mic = { stream, source, analyser, sink };
+  tuned = new Set();
+  trail = []; recent = [];
+  lastReading = null;
+  $("allTuned").hidden = true;
+  $("micGate").hidden = true;
+  showIdle();
+  refresh();
+}
+
+function stopTuner() {
+  micTicket++;
+  if (!mic) return;
+  mic.stream.getTracks().forEach(t => t.stop());
+  mic.source.disconnect();
+  mic.sink.disconnect();
+  mic = null;
+  audioSession("playback");
+  $("micMsg").className = "";
+  $("micMsg").textContent = "The microphone is off.";
+  $("micGate").hidden = false;
+  showIdle();
+  drawTrace(performance.now(), null);
+  refresh();
+}
+
+// If the microphone was allowed before, opening the tuner can just start it.
+function startTunerIfAllowed() {
+  if (mic || !navigator.permissions) return;
+  const ticket = micTicket;
+  navigator.permissions.query({ name: "microphone" })
+    .then(p => { if (p.state === "granted" && ticket === micTicket) startTuner(); })
+    .catch(() => {});
+}
+
+function median(list) {
+  const s = [...list].sort((a, b) => a - b);
+  return s[s.length >> 1];
+}
+
+function listen(now) {
+  if (++frameNo % 2) return;                               // 30 readings a second is plenty
+  const rate = ac.sampleRate;
+  const want = (rate > 30000 ? 4096 : 2048) * (tuning.long ? 2 : 1);
+  if (!samples || samples.length !== mic.analyser.fftSize) samples = new Float32Array(mic.analyser.fftSize);
+  mic.analyser.getFloatTimeDomainData(samples);
+  const lowest = tuning.notes.length ? Math.min(...tuning.notes) - 7 : 35;
+  const highest = tuning.notes.length ? Math.max(...tuning.notes) + 12 : 89;
+  const r = now < quietUntil ? null
+    : detect(samples.subarray(samples.length - want), rate, midiToFreq(lowest), midiToFreq(highest));
+
+  if (r && r.clarity >= 0.9 && r.rms > 0.0015) {
+    const m = freqToMidi(r.freq);
+    if (recent.length && Math.abs(m - recent[recent.length - 1]) > 1) recent = [];    // a new note: forget the old one
+    recent.push(m);
+    if (recent.length > 5) recent.shift();
+    trail.push({ t: now, m: median(recent) });             // the middle of the last few: one stray reading can't jog the line
+    lastHeard = now;
+  } else if (now - lastHeard > 250) {
+    recent = [];
+  }
+  while (trail.length && now - trail[0].t > TRACE_SECONDS * 1000 + 200) trail.shift();
+
+  if (recent.length < 2) {
+    goodSince = 0;
+    if (lastHeard && now - lastHeard > 1500) { lastHeard = 0; lastReading = null; showIdle(); }
+    return;
+  }
+  const m = median(recent);
+  const target = locked != null ? locked
+    : tuning.notes.length ? tuning.notes.reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a)
+    : Math.round(m);
+  const cents = (m - target) * 100;
+  const good = Math.abs(cents) <= IN_TUNE;
+  lastReading = { freq: midiToFreq(m), note: noteName(target) + noteOctave(target), cents, clarity: r ? r.clarity : 0 };
+
+  noteEl.textContent = noteName(target);
+  noteEl.appendChild(document.createElement("sub")).textContent = noteOctave(target);
+  noteEl.className = "note" + (good ? " good" : "");
+  if (tuning.notes.length) {
+    const [lo, hi] = rulerSpan();
+    marker.style.left = clamp((m - lo) / (hi - lo), 0, 1) * 100 + "%";
+    marker.className = "on" + (good ? " good" : "");
+  }
+  if (now - lastText > 90) {                               // numbers that change 60 times a second can't be read
+    lastText = now;
+    const off = Math.abs(cents), rounded = Math.round(cents);
+    $("cents").textContent = (rounded > 0 ? "+" : rounded < 0 ? "−" : "") + Math.abs(rounded) + "¢";
+    $("verdict").className = good ? "good" : "";
+    $("verdict").textContent = good ? "in tune ✓"
+      : (off < 15 ? "a hair " : off > 50 ? "way " : "") + (cents < 0 ? "flat · tune up ↑" : "sharp · tune down ↓");
+    const near = Math.round(m);
+    $("hz").textContent = midiToFreq(m).toFixed(1) + " Hz" + (off > 50 ? " · that's near " + noteName(near) + noteOctave(near) : "");
+    showStrings(target);
+  }
+
+  // hold it in tune for a moment and the string gets its tick
+  if (!good) goodSince = 0;
+  else if (!goodSince) goodSince = now;
+  else if (now - goodSince > 600 && tuning.notes.includes(target) && !tuned.has(target)) {
+    tuned.add(target);
+    if (navigator.vibrate) navigator.vibrate(25);
+    if (locked === target) locked = null;
+    showStrings(target);
+    if (tuned.size === new Set(tuning.notes).size) $("allTuned").hidden = false;
+  }
+}
+
+/* --- the trace: the last few seconds of pitch, falling like ink down a page --- */
+
+const pen = trace.getContext("2d");
+let ink = {};
+function readInk() {
+  const css = getComputedStyle(document.documentElement);
+  ["ink", "ink-soft", "line", "sage", "sage-deep", "honey", "terracotta", "card"].forEach(k => { ink[k] = css.getPropertyValue("--" + k).trim(); });
+}
+function sizeTrace() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.round(trace.clientWidth * dpr), h = Math.round(trace.clientHeight * dpr);
+  if (w && h && (trace.width !== w || trace.height !== h)) { trace.width = w; trace.height = h; }
+}
+
+function drawTrace(now, target) {
+  sizeTrace();
+  const w = trace.width, h = trace.height, dpr = window.devicePixelRatio || 1;
+  const top = 26 * dpr;                                    // "now" is up here, by the big note
+  const x = c => w / 2 + clamp(c, -50, 50) / 50 * (w / 2 - 12 * dpr);
+  pen.clearRect(0, 0, w, h);
+
+  pen.globalAlpha = 0.2;
+  pen.fillStyle = ink.sage;
+  pen.fillRect(x(-IN_TUNE), 0, x(IN_TUNE) - x(-IN_TUNE), h);
+  pen.globalAlpha = 1;
+  pen.strokeStyle = ink.line;
+  pen.lineWidth = dpr;
+  pen.beginPath();
+  for (let c = -50; c <= 50; c += 10) {
+    pen.moveTo(x(c), 0);
+    pen.lineTo(x(c), c === 0 ? h : 7 * dpr);
+  }
+  pen.stroke();
+  pen.fillStyle = ink["ink-soft"];
+  pen.font = 13 * dpr + "px Georgia, serif";
+  pen.textBaseline = "top";
+  pen.textAlign = "left";  pen.fillText("♭ flat", 8 * dpr, 10 * dpr);
+  pen.textAlign = "right"; pen.fillText("sharp ♯", w - 8 * dpr, 10 * dpr);
+  if (target == null || !trail.length) return;
+
+  const y = t => top + (now - t) / (TRACE_SECONDS * 1000) * (h - top);
+  pen.lineCap = "round";
+  pen.lineWidth = 3.5 * dpr;
+  for (let i = 1; i < trail.length; i++) {
+    const a = trail[i - 1], b = trail[i];
+    if (b.t - a.t > 150) continue;                         // a silence: lift the pen
+    const ca = (a.m - target) * 100, cb = (b.m - target) * 100;
+    if (Math.abs(ca) > 300 || Math.abs(cb) > 300) continue;      // some other note entirely
+    const off = Math.abs(cb);
+    pen.strokeStyle = off <= IN_TUNE ? ink["sage-deep"] : off <= 15 ? ink.honey : ink.terracotta;
+    pen.globalAlpha = clamp(1.15 - (now - b.t) / (TRACE_SECONDS * 1000), 0.12, 1);
+    pen.beginPath();
+    pen.moveTo(x(ca), y(a.t));
+    pen.lineTo(x(cb), y(b.t));
+    pen.stroke();
+  }
+  const last = trail[trail.length - 1];
+  const c = (last.m - target) * 100;
+  if (now - last.t < 250 && Math.abs(c) <= 300) {          // the pen's nib
+    pen.globalAlpha = 1;
+    pen.fillStyle = Math.abs(c) <= IN_TUNE ? ink["sage-deep"] : ink.terracotta;
+    pen.strokeStyle = ink.card;
+    pen.lineWidth = 2 * dpr;
+    pen.beginPath();
+    pen.arc(x(c), top, 7 * dpr, 0, 2 * Math.PI);
+    pen.fill();
+    pen.stroke();
+  }
+  pen.globalAlpha = 1;
+}
+
+function traceTarget() {
+  if (locked != null) return locked;
+  if (!recent.length && !trail.length) return null;
+  const m = recent.length ? median(recent) : trail[trail.length - 1].m;
+  if (!tuning.notes.length) return Math.round(m);
+  return tuning.notes.reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a);
+}
+
+/* --------------------------------- wiring ---------------------------------- */
+
+// one animation loop, only while something is moving
+let looping = false;
+function frame(now) {
+  if (!isPlaying && !mic) { looping = false; return; }
+  if (isPlaying) drawPlayhead();
+  if (mic) { listen(now); drawTrace(now, traceTarget()); }
+  requestAnimationFrame(frame);
+}
+
+// keep the screen on while the phone is on the music stand
+let wake = null, wakeAsked = false;
+function keepAwake(on) {
+  if (!navigator.wakeLock) return;
+  if (on && !wake && !wakeAsked && !document.hidden) {
+    wakeAsked = true;
+    navigator.wakeLock.request("screen")
+      .then(lock => { wake = lock; lock.addEventListener("release", () => { wake = null; }); if (!isPlaying && !mic) lock.release(); })
+      .catch(() => {})
+      .then(() => { wakeAsked = false; });
+  } else if (!on && wake) {
+    wake.release().catch(() => {});
+  }
+}
+
+function refresh() {
+  if ((isPlaying || mic) && !looping) { looping = true; requestAnimationFrame(frame); }
+  keepAwake(isPlaying || !!mic);
+  document.querySelector('.tab[data-tab="drum"]').classList.toggle("live", isPlaying);
+  document.querySelector('.tab[data-tab="tune"]').classList.toggle("live", !!mic);
+}
+
+function selectTab(name) {
+  prefs.tab = name;
+  savePrefs();
+  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === name));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("selected", t.dataset.tab === name));
+  if (name === "tune") { buildStrings(); drawTrace(performance.now(), null); }
+}
+$("tabs").addEventListener("click", e => {
+  const tab = e.target.closest(".tab");
+  if (!tab) return;
+  ensureAudio();
+  selectTab(tab.dataset.tab);
+  if (tab.dataset.tab === "tune") startTunerIfAllowed();
+  else stopTuner();                                       // leaving the tuner lets go of the microphone
+  window.scrollTo(0, 0);
+});
+
+let toastTimer = 0;
+function toast(text) {
+  const el = $("toast");
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+playBtn.addEventListener("click", togglePlay);
+newBeatBtn.addEventListener("click", () => {
+  newBeatBtn.classList.remove("rolling");
+  void newBeatBtn.offsetWidth;   // restart the dice animation
+  newBeatBtn.classList.add("rolling");
+  newBeat();
+});
+$("tapBtn").addEventListener("pointerdown", tapTempo);
+$("micStart").addEventListener("click", startTuner);
+$("micStop").addEventListener("click", stopTuner);
+$("allTuned").addEventListener("click", () => {
+  stopTuner();
+  selectTab("drum");
+  window.scrollTo(0, 0);
+  playBtn.focus({ preventScroll: true });
+});
+
+$("shareBtn").addEventListener("click", async () => {
+  remember();
+  const url = location.href;
+  if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+    try { await navigator.share({ title: "Porch", text: "“" + pattern.title + "”, " + pattern.story, url }); } catch (e) {}
+    return;
+  }
+  try { await navigator.clipboard.writeText(url); toast("Link to this beat copied"); }
+  catch (e) { toast("The address bar holds a link to this beat"); }
+});
+
+tempoSlider.addEventListener("input", updateOutputs);
+swingSlider.addEventListener("input", updateOutputs);
+tempoSlider.addEventListener("change", remember);
+swingSlider.addEventListener("change", remember);
+volumeSlider.addEventListener("input", () => {
+  updateOutputs();
+  prefs.volume = Number(volumeSlider.value);
+  savePrefs();
+  // a smoothed ramp: writing the value directly crackles while audio is playing
+  if (kit) kit.master.gain.setTargetAtTime(volumeToGain(volumeSlider.value), ac.currentTime, 0.02);
+});
+
+function wireToggle(id, key) {
+  const btn = $(id);
+  btn.setAttribute("aria-pressed", prefs[key]);
+  btn.addEventListener("click", () => {
+    prefs[key] = !prefs[key];
+    btn.setAttribute("aria-pressed", prefs[key]);
+    savePrefs();
+    if (!isPlaying) drawBars(-9, 0);
+  });
+}
+wireToggle("countInBtn", "countIn");
+wireToggle("fillsBtn", "fills");
+
+[{ id: "surprise", name: "Surprise me" }].concat(STYLES).forEach(def => {
+  const chip = document.createElement("button");
+  chip.className = "chip" + (def.id === selectedStyleId ? " selected" : "");
+  chip.textContent = def.name;
+  chip.addEventListener("click", () => {
+    selectedStyleId = def.id;
+    [...$("styleChips").children].forEach(c => c.classList.toggle("selected", c === chip));
+    newBeat();
+  });
+  $("styleChips").appendChild(chip);
+});
+TUNINGS.forEach(t => {
+  const chip = document.createElement("button");
+  chip.className = "chip";
+  chip.dataset.id = t.id;
+  chip.textContent = t.name;
+  chip.addEventListener("click", () => setTuning(t));
+  $("tuningChips").appendChild(chip);
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    stopTuner();                                          // never listen from a tab you can't see
+    if (isPlaying) scheduler();                           // but keep drumming: book ahead before the timers slow down
+  } else {
+    if (ac && ac.state !== "running") ac.resume();        // iOS can leave it "interrupted" after a call or an alarm
+    refresh();
+  }
+});
+window.addEventListener("pagehide", stopTuner);
+window.addEventListener("hashchange", () => {
+  const beat = location.hash.slice(1) !== prefs.last && decodeBeat(location.hash);
+  if (beat) setBeat(beat);
+});
+window.addEventListener("resize", () => { if (tuning.notes.length) buildStrings(); if (!mic) drawTrace(performance.now(), null); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readInk(); if (!mic) drawTrace(performance.now(), null); });
+
+document.addEventListener("keydown", e => {
+  if (e.repeat && e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "textarea" || tag === "input") return;      // sliders keep their own arrow keys
+  if (e.code === "Space") {
+    e.preventDefault();
+    togglePlay();
+  } else if (e.key === "n" || e.key === "N") {
+    newBeatBtn.click();
+  } else if (e.key === "t" || e.key === "T") {
+    if (mic) stopTuner(); else { selectTab("tune"); startTuner(); }
+  } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    tempoSlider.value = Number(tempoSlider.value) + (e.key === "ArrowRight" ? 1 : -1);
+    updateOutputs();
+    remember();
+  }
+});
+
+/* ---------------------------------- begin ---------------------------------- */
+
+volumeSlider.value = prefs.volume;
+readInk();
+// a beat from a link, or the one you left, or something friendly to start on
+setBeat(decodeBeat(location.hash) || decodeBeat(prefs.last) || makeBeat("boomchick"));
+setTuning(tuning);
+selectTab(prefs.tab === "tune" ? "tune" : "drum");
+drawTrace(performance.now(), null);
+
+// a way in for test/browser.test.js
+window.porch = {
+  get reading() { return lastReading; },
+  get listening() { return !!mic; },
+  get playing() { return isPlaying; },
+  get stats() { return stats; },
+  get audio() { return ac; },
+  get kit() { return kit; },
+  get beat() { return pattern; },
+  makeKit, scheduleStep, stepDuration, decodeBeat, encodeBeat, detect,
+};
+</script>
+</body>
+</html>
