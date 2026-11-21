@@ -66,9 +66,28 @@ The name comes from the old tagline. A porch is where this gets used.
 
 **Dark mode,** following the device.
 
+## The song
+
+The first person to play along with the drummer asked for the rest of the band: chords, for a whole song, to practise single-note lead playing over. That is the second thing a porch jam needs after a beat, so it's a switch at the top of the drummer ("Just a beat" or "A whole song") and not a third room.
+
+**A song is the beat, continued.** It grows from the same seed, keeps the beat's name and story, and travels in the same link with one more field for its key. An old link is still a beat.
+
+**Ordinary on purpose.** The request was for a "random-normal" song, and normal is the point: you practise over the changes you'll meet. So the progressions are the common ones (I, IV, V and the relative minor; i, VII and VI in a minor key), eight bars to a part, one chord to a bar. The verse sits at home, the chorus opens somewhere else, the bridge ends wanting to come back. The order is one of four familiar ones, with a four-bar intro borrowed from the end of the verse and a three-bar ending that lands on the home chord and rings.
+
+**It says where you are.** A soloist needs three things at a glance: the chord now, the chord next and when, and how far through the part we are. The chord is the biggest thing on the card. The road map shows the whole song, and tapping a part starts from there, because the bridge is the bit that needs the most goes.
+
+**It shows what to play.** Under the chart is a neck with the five notes of the key's pentatonic scale, which fit over every chord in the song. As each chord comes round its own notes light up, including the ones outside the scale: those are the notes that sound like you meant it. The neck is that of whichever instrument the tuner is set to.
+
+**The guitar plays like the style.** Each style has three ways of strumming: one for verses, a busier one for choruses, and a held chord for the bridge. Boom-Chick alternates bass notes with strums, the lullaby picks arpeggios, the waltz goes bass-strum-strum. The whole band plays the chorus a little harder and the bridge a little softer, and fills move from every fourth bar to the last bar of each part.
+
+**Go round again.** A song ends, as songs do. For longer practice a toggle skips the ending and returns to the first verse.
+
+**Keys you'd meet on a porch.** G, C, D, A, E, A minor and E minor: the keys of open chords. Changing key moves the same song, so you can try the same solo somewhere else on the neck.
+
 ## Left out on purpose
 
 - **Tuning while the drums play.** See above.
 - **Accounts, saved lists, a server.** A link is enough.
 - **Sampled drums.** They would sound more real, and the page would stop being one small file that explains itself.
 - **A needle.** The trace does the same job and shows more.
+- **A melody.** The band leaves the tune to you.

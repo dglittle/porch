@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f6efe1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#211b17" media="(prefers-color-scheme: dark)">
-<meta name="description" content="A pocket tuner and drummer for porch jams. Tune up, count in, play.">
+<meta name="description" content="A pocket tuner, drummer and rhythm guitar for porch jams. Tune up, count in, play.">
 <title>Porch · tune up, count in, play</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥁</text></svg>">
 <style>
@@ -47,6 +47,7 @@
   }
 
   html, body { margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
   body {
     font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
     background: radial-gradient(1200px 500px at 50% -100px, var(--glow) 0%, var(--paper) 60%), var(--paper);
@@ -114,6 +115,13 @@
     background: transparent; font-size: 1.05em; opacity: 0.75;
   }
 
+  .mode {
+    display: flex; width: fit-content; margin: 0 auto 10px; padding: 3px; border-radius: 999px;
+    background: var(--paper-deep); border: 1px solid var(--line);
+  }
+  .mode button { background: transparent; border-radius: 999px; padding: 7px 16px; font-size: 0.95em; color: var(--ink-soft); }
+  .mode button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
   .main-buttons { display: flex; gap: 12px; justify-content: center; margin-bottom: 8px; }
   .big {
     font-size: 1.25em; padding: 13px 26px; border-radius: 999px; color: var(--on-color);
@@ -122,7 +130,7 @@
   .big:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.3) !important; }
   #playBtn { flex: 1.3; max-width: 230px; background: var(--sage-deep); box-shadow: 0 4px 0 #48563a; }
   #playBtn.playing { background: #b0563f; box-shadow: 0 4px 0 #8d4230; }
-  #newBeatBtn { flex: 1; max-width: 200px; background: var(--terracotta-deep); box-shadow: 0 4px 0 #7e2f1f; }
+  #newBeatBtn { flex: 1; max-width: 200px; padding-left: 10px; padding-right: 10px; white-space: nowrap; background: var(--terracotta-deep); box-shadow: 0 4px 0 #7e2f1f; }
   #newBeatBtn.rolling .dice { display: inline-block; animation: roll 0.45s ease; }
   @keyframes roll { to { transform: rotate(360deg); } }
 
@@ -132,6 +140,60 @@
   .bars i.fill { border-radius: 2px; transform: rotate(45deg); }
   .bars i.fill.now { transform: rotate(45deg) scale(1.35); }
   .bars b { font-weight: normal; font-size: 1.25em; color: var(--terracotta); min-width: 1em; text-align: center; }
+
+  /* ------------------------------- song ------------------------------- */
+  .song { padding: 10px 12px 12px; margin-bottom: 12px; }
+  .song-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; color: var(--ink-soft); font-size: 0.9em; }
+  .song-now { display: flex; align-items: center; justify-content: center; gap: 18px; height: 68px; }
+  .chord-now { font-size: 3.3em; line-height: 1; min-width: 1.7em; text-align: right; }
+  .chord-next { min-width: 6.5em; color: var(--ink-soft); line-height: 1.25; }
+  .chord-next b { font-weight: normal; color: var(--ink); font-size: 1.45em; }
+  .chord-next small { display: block; font-size: 0.85em; }
+  .chord-next.count b { font-size: 2.2em; color: var(--terracotta); }
+  .roadmap {
+    position: relative; display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
+    margin: 2px -12px 8px; padding: 0 12px;
+  }
+  .roadmap::-webkit-scrollbar { display: none; }
+  .roadmap button {
+    flex: none; background: var(--paper-deep); border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 9px; font-size: 0.85em; color: var(--ink-soft);
+  }
+  .roadmap button.cue { border-color: var(--ink); color: var(--ink); }
+  .roadmap button.now { background: var(--terracotta); border-color: var(--terracotta); color: var(--on-color); }
+  .chart {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; align-content: start;
+    min-height: 84px; margin-bottom: 10px;      /* room for eight bars, so a four-bar intro doesn't make the page jump */
+  }
+  .chart div {
+    position: relative; height: 40px; line-height: 40px; text-align: center; font-size: 1.2em;
+    background: var(--paper-deep); border-radius: 7px; overflow: hidden;
+  }
+  .chart div.done { opacity: 0.5; }
+  .chart div.ahead { background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--ink-soft); }
+  .chart div.now { background: var(--ink); color: var(--paper); }
+  .chart div.now::after { content: ""; position: absolute; left: 0; bottom: 0; height: 4px; width: var(--p, 0%); background: var(--honey); }
+  #soloTip { font-size: 0.92em; line-height: 1.35; margin-bottom: 6px; }
+  #soloTip b { font-weight: normal; color: var(--sage-deep); }
+  .neck { display: grid; grid-template-columns: 24px repeat(12, minmax(0, 1fr)); }
+  .neck .fret { position: relative; height: 22px; border-right: 1px solid var(--line); }
+  .neck .fret::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--line); }
+  .neck .fret.open { border-right: 3px solid var(--ink-soft); }
+  .neck .dot {
+    display: none; position: absolute; inset: 0; margin: auto; z-index: 1; width: 18px; height: 18px; border-radius: 50%;
+    font-size: 9px; line-height: 18px; text-align: center; letter-spacing: -0.5px; white-space: nowrap;
+    background: var(--cell); color: var(--ink-soft); transition: background 0.12s;
+  }
+  .neck .dot.scale, .neck .dot.tone { display: block; }
+  .neck .dot.home { box-shadow: inset 0 0 0 1.5px var(--ink-soft); }
+  .neck .dot.tone { background: var(--honey); color: #3b2a1c; }
+  .neck .dot.root { background: var(--terracotta); color: #fffaf0; box-shadow: none; }
+  .neck .num { height: 15px; line-height: 15px; text-align: center; font-size: 0.7em; color: var(--ink-soft); }
+  .neck-note { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; margin-top: 4px; color: var(--ink-soft); font-size: 0.8em; }
+  .neck-note i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; background: var(--cell); vertical-align: -1px; }
+  .neck-note i.root { background: var(--terracotta); }
+  .neck-note i.tone { background: var(--honey); }
+  .neck-note i.home { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-soft); }
 
   .grid {
     display: grid; grid-template-columns: 34px repeat(var(--steps, 16), minmax(0, 1fr));
@@ -269,6 +331,8 @@
     .cell.beat-start { margin-left: 5px; }
     .keys { display: inline; }
     #trace { height: 260px; }
+    .neck .fret { height: 25px; }
+    .neck .dot { width: 21px; height: 21px; line-height: 21px; font-size: 10.5px; }
   }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -309,6 +373,10 @@
   </section>
 
   <section class="panel" id="drum" aria-label="Drummer">
+    <div class="mode" id="modeSwitch" role="group" aria-label="What to play">
+      <button data-mode="beat" aria-pressed="true">🥁 Just a beat</button>
+      <button data-mode="song" aria-pressed="false">🎸 A whole song</button>
+    </div>
     <div class="card beat-card">
       <button id="shareBtn" title="Share this beat" aria-label="Share this beat">🔗</button>
       <div class="beat-name" id="beatName">…</div>
@@ -323,7 +391,29 @@
     </div>
     <div class="bars" id="bars"></div>
 
+    <div class="card song" id="songCard" hidden>
+      <div class="song-top">
+        <div id="songWhere"></div>
+        <div id="songKey"></div>
+      </div>
+      <div class="song-now">
+        <div class="chord-now" id="chordNow"></div>
+        <div class="chord-next" id="chordNext"></div>
+      </div>
+      <div class="roadmap" id="roadmap"></div>
+      <div class="chart" id="chart"></div>
+      <div id="soloTip"></div>
+      <div class="neck" id="neck"></div>
+      <div class="neck-note">
+        <span><i class="root"></i>the chord's root</span>
+        <span><i class="tone"></i>in the chord: land here</span>
+        <span><i></i>fits anywhere</span>
+        <span><i class="home"></i>home</span>
+      </div>
+    </div>
+
     <div class="chips" id="styleChips"></div>
+    <div class="chips song-only" id="keyChips"></div>
 
     <div class="card grid" id="grid"></div>
 
@@ -337,13 +427,18 @@
       <label for="volume">Volume</label>
       <input type="range" id="volume" min="0" max="100" value="80">
       <output id="volumeOut">80</output>
+      <label for="guitar" class="song-only">Guitar</label>
+      <input type="range" id="guitar" class="song-only" min="0" max="100" value="70">
+      <output id="guitarOut" class="song-only">70</output>
       <div class="toggles">
         <button class="toggle" id="countInBtn" aria-pressed="true">Count-in</button>
-        <button class="toggle" id="fillsBtn" aria-pressed="true">Fill every 4th bar</button>
+        <button class="toggle" id="fillsBtn" aria-pressed="true">Fills</button>
+        <button class="toggle song-only" id="repeatBtn" aria-pressed="false">Go round again</button>
       </div>
     </div>
 
     <p class="hint">
+      <span class="song-only">Tap a part of the song to start from there.<br></span>
       Tap squares to add hits, twice for an accent; drag to paint. Tap an instrument to hush it.
       <span class="keys"><br><b>Space</b> plays and stops · <b>N</b> rolls a new beat · <b>T</b> starts the tuner · <b>←/→</b> nudge the tempo</span>
     </p>
@@ -381,6 +476,7 @@ function ensureAudio() {
     ac = new AC({ latencyHint: "interactive" });
     kit = makeKit(ac, ac.destination);
     kit.master.gain.value = volumeToGain(volumeSlider.value);
+    kit.guitar.gain.value = guitarToGain(guitarSlider.value);
     // iOS unlock: play a silent blip inside the gesture
     const silent = ac.createBufferSource();
     silent.buffer = ac.createBuffer(1, 1, ac.sampleRate);
@@ -401,6 +497,7 @@ function audioSession(type) {
 }
 
 function volumeToGain(v) { return Math.pow(v / 100, 1.5) * 1.1; }
+function guitarToGain(v) { return Math.pow(v / 70, 1.5); }       // the guitar against the drums: even at 70
 
 // The kit is built on whatever context it's given, so the same voices play live
 // and render offline (the tests listen to it that way).
@@ -518,37 +615,83 @@ function makeKit(ctx, dest) {
     },
   };
 
-  // A plucked string (Karplus-Strong) for the tuner's reference notes.
-  const plucks = {};
-  function pluck(freq, t) {
-    let buf = plucks[freq];
-    if (!buf) {
-      // the loop is a two-tap average (half a sample of delay) plus a fractional
-      // delay, so the whole trip is exactly one period and the note is in tune
-      const n = Math.floor(rate * 2.2), period = rate / freq, p = Math.floor(period - 0.5), frac = period - 0.5 - p;
-      buf = plucks[freq] = ctx.createBuffer(1, n, rate);
-      const d = buf.getChannelData(0);
-      let lp = 0;
-      for (let i = 0; i < p + 2; i++) { lp += 0.45 * ((Math.random() * 2 - 1) - lp); d[i] = lp; }  // a soft thumb, not a pick
-      const damp = Math.pow(0.001, period / (rate * 2.5)) * 0.5;       // -60 dB in about 2.5 s
-      for (let i = p + 2; i < n; i++) {
-        const a = d[i - p] * (1 - frac) + d[i - p - 1] * frac;
-        const b = d[i - p - 1] * (1 - frac) + d[i - p - 2] * frac;
-        d[i] = damp * (a + b);
-      }
-      let peak = 0;
-      for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(d[i]));
-      for (let i = 0; i < n; i++) d[i] *= (1 - i / n) / peak;
+  // A plucked string (Karplus-Strong): a burst of noise going round a loop exactly one
+  // period long, losing a little each trip. soft: how round the pluck is (a thumb or a
+  // pick); sustain: seconds to fade by 60 dB; picked: pluck it near the bridge.
+  const strings = {};
+  function stringBuffer(freq, soft, seconds, sustain, picked) {
+    const key = freq.toFixed(2) + "/" + soft;
+    if (strings[key]) return strings[key];
+    // the loop is a two-tap average (half a sample of delay) plus a fractional
+    // delay, so the whole trip is exactly one period and the note is in tune
+    const n = Math.floor(rate * seconds), period = rate / freq, p = Math.floor(period - 0.5), frac = period - 0.5 - p;
+    const buf = strings[key] = ctx.createBuffer(1, n, rate);
+    const d = buf.getChannelData(0);
+    let lp = 0;
+    for (let i = 0; i < p + 2; i++) { lp += soft * ((Math.random() * 2 - 1) - lp); d[i] = lp; }
+    if (picked) {
+      // a pick a fifth of the way along the string cancels every fifth overtone,
+      // which is most of what makes a guitar not a harpsichord
+      const q = Math.max(1, Math.round(p / 5));
+      let mean = 0;
+      for (let i = p + 1; i >= q; i--) d[i] -= 0.6 * d[i - q];
+      for (let i = 0; i < p + 2; i++) mean += d[i] / (p + 2);
+      for (let i = 0; i < p + 2; i++) d[i] -= mean;
     }
+    const damp = Math.pow(0.001, period / (rate * sustain)) * 0.5;
+    for (let i = p + 2; i < n; i++) {
+      const a = d[i - p] * (1 - frac) + d[i - p - 1] * frac;
+      const b = d[i - p - 1] * (1 - frac) + d[i - p - 2] * frac;
+      d[i] = damp * (a + b);
+    }
+    let peak = 0;
+    for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(d[i]));
+    for (let i = 0; i < n; i++) d[i] *= (1 - i / n) / peak;
+    return buf;
+  }
+
+  // the tuner's reference notes: a soft thumb, left to ring
+  function pluck(freq, t) {
     const src = ctx.createBufferSource();
-    src.buffer = buf;
+    src.buffer = stringBuffer(freq, 0.45, 2.2, 2.5);
     const g = ctx.createGain();
     g.gain.value = 0.8;
     src.connect(g).connect(bus);
     src.start(t);
   }
 
-  return { play, pluck, master, bus };
+  // The guitar in a song: the same strings, picked, through a little wooden box.
+  const guitar = ctx.createGain();
+  const box = filter("peaking", 190, 0.9);
+  box.gain.value = 3.5;
+  const top = filter("highshelf", 1400);        // a bare string is much brighter than a guitar
+  top.gain.value = -6;
+  guitar.connect(filter("highpass", 70)).connect(box).connect(top).connect(filter("lowpass", 6500, 0.7)).connect(bus);
+
+  const guitarString = m => stringBuffer(midiToFreq(m), 0.8, 1.8, 2.4 - (m - 40) * 0.03, true);   // low strings ring longer
+  // Several strings (MIDI notes) one after another, the way a hand crosses them.
+  // Returns the hand, which can damp them again before the next chord.
+  function strum(notes, t, { vel = 1, gap = 0.012, out } = {}) {
+    const hand = ctx.createGain();
+    hand.connect(out || guitar);
+    const srcs = notes.map((m, i) => {
+      const src = ctx.createBufferSource();
+      src.buffer = guitarString(m);
+      const g = ctx.createGain();
+      g.gain.value = 0.46 * vel * (0.9 + Math.random() * 0.2);
+      src.connect(g).connect(hand);
+      src.start(t + i * gap);
+      return src;
+    });
+    return {
+      damp(at) {
+        hand.gain.setTargetAtTime(0, at, 0.02);
+        srcs.forEach(src => { try { src.stop(at + 0.2); } catch (e) {} });
+      }
+    };
+  }
+
+  return { play, pluck, strum, string: guitarString, guitar, master, bus };
 }
 
 const INSTRUMENTS = [
@@ -658,6 +801,8 @@ const noteOctave = m => Math.floor(m / 12) - 1;
 // </pitch>
 
 /* -------------------------------- the beats -------------------------------- */
+// (test/song.test.js lifts everything between the two song markers into Node)
+// <song>
 
 // Everything about a beat grows from one seed, so a link can carry it.
 let rng = Math.random;
@@ -698,12 +843,17 @@ const SOMEBODY = [
  Cells: 0 = rest, 1 = hit, 2 = accent.
  steps/perBeat define the meter: 16/4 = 4/4 in 16ths, 12/4 = 3/4 in 16ths,
  12/6 = 6/8 counted in two big pulses.
+ strums is what the guitar does in a song, for a verse, a chorus and a bridge,
+ as step:stroke. b: the chord's bass note, a: the other bass note (its fifth),
+ d: strum down, u: a lighter strum back up, D: the whole chord, slowly,
+ 1 2 3: pick one string, counting from the highest.
 */
 const STYLES = [
   {
     id: "train", name: "Train Beat", meterLabel: "4/4",
     steps: 16, perBeat: 4, tempo: [88, 118], swing: [12, 30],
     strum: "🎸 Flatpick it: boom-chicka boom-chicka. Try G, C and D",
+    strums: ["0:b 4:d 6:u 8:a 12:d 14:u", "0:b 2:u 4:d 6:u 8:a 10:u 12:d 14:u", "0:D 8:a"],
     does: ["races the 5:15 freight to the crossing", "rides the rails clear to morning",
       "keeps time for a train that never stops here", "counts boxcars all the way to the caboose",
       "outruns the rain by half a mile"],
@@ -734,6 +884,7 @@ const STYLES = [
     id: "boomchick", name: "Boom-Chick", meterLabel: "4/4",
     steps: 16, perBeat: 4, tempo: [80, 112], swing: [0, 0],
     strum: "🎸 Bass note on the boom, strum on the chick: D _ DU _",
+    strums: ["0:b 4:d 8:a 12:d", "0:b 4:d 6:u 8:a 12:d 14:u", "0:D 8:a"],
     does: ["walks to town and back, in no hurry", "taps a boot on the bottom step",
       "learns two chords and uses them both", "saws a little wood before supper",
       "sweeps the porch one board at a time"],
@@ -765,6 +916,7 @@ const STYLES = [
     id: "waltz", name: "Front-Porch Waltz", meterLabel: "3/4",
     steps: 12, perBeat: 4, tempo: [84, 132], swing: [0, 0],
     strum: "🎸 One-two-three: bass, chuck, chuck. Lovely with Am and C",
+    strums: ["0:b 4:d 8:d", "0:b 4:d 6:u 8:d 10:u", "0:D"],
     does: ["waltzes with the broom when nobody's looking", "takes three steps around the kitchen",
       "asks the moon for the last dance", "turns slow circles in the yard",
       "sways with the laundry on the line"],
@@ -798,6 +950,7 @@ const STYLES = [
     id: "shuffle", name: "Back-Porch Shuffle", meterLabel: "4/4 swung",
     steps: 16, perBeat: 4, tempo: [78, 112], swing: [52, 66], swingEighths: true,
     strum: "🎸 Lazy swung strums: D _ du D _ du. Try E, A7 and B7",
+    strums: ["0:b 4:d 6:u 8:a 12:d 14:u", "0:D 4:d 6:u 8:a 10:u 12:d 14:u", "0:D 8:a"],
     does: ["drags one heel all the way home", "leans on the fence and takes its time",
       "strolls in late and nobody minds", "skips every other puddle",
       "whistles through the gap in the gate"],
@@ -826,6 +979,7 @@ const STYLES = [
     id: "sixeight", name: "6/8 Lullaby", meterLabel: "6/8",
     steps: 12, perBeat: 6, tempo: [46, 62], swing: [0, 0],
     strum: "🎸 Slow rolling arpeggios, one chord per big pulse. Em is gorgeous",
+    strums: ["0:b 2:3 4:2 6:1 8:2 10:3", "0:b 2:3 4:2 6:d 8:2 10:3", "0:D 6:a"],
     does: ["rocks the porch swing till the stars come out", "hums the baby down to sleep",
       "rows a slow boat across the pond", "counts fireflies and loses track",
       "watches the lamp burn low"],
@@ -856,6 +1010,7 @@ const STYLES = [
     id: "hambone", name: "Hambone", meterLabel: "4/4",
     steps: 16, perBeat: 4, tempo: [84, 108], swing: [0, 14],
     strum: "🎸 Shave-and-a-haircut: chuck the muted strings, land on one big E",
+    strums: ["0:b 3:d 6:d 10:u 12:d", "0:D 3:d 6:d 8:u 10:u 12:d 14:u", "0:D 12:a"],
     does: ["knocks on every door on the street", "claps for a parade of one",
       "pats out the news on a knee", "answers back from the far side of the creek",
       "rattles the gate until somebody dances"],
@@ -886,6 +1041,7 @@ const STYLES = [
     id: "porch", name: "Porch Groove", meterLabel: "4/4",
     steps: 16, perBeat: 4, tempo: [84, 106], swing: [8, 24],
     strum: "🎸 The old faithful: D DU UDU. Capo optional",
+    strums: ["0:b 4:d 6:u 10:u 12:d 14:u", "0:D 4:d 6:u 10:u 12:d 14:u", "0:D 8:a"],
     does: ["pours the lemonade and pulls up a chair", "sings along without knowing the words",
       "watches the afternoon go by", "nods along from the rocking chair",
       "waves at every passing truck"],
@@ -919,17 +1075,128 @@ const STYLES = [
   },
 ];
 
+/* -------------------------------- the songs -------------------------------- */
+// A song is a beat plus chords: an intro, verses, choruses and a bridge, each
+// eight bars with one chord to a bar. It grows from the same seed as the beat.
+
+const PITCHES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "G♯", "A", "B♭", "B"];
+const KEYS = [
+  { id: "G", tonic: 7 }, { id: "C", tonic: 0 }, { id: "D", tonic: 2 }, { id: "A", tonic: 9 }, { id: "E", tonic: 4 },
+  { id: "Am", tonic: 9, minor: true }, { id: "Em", tonic: 4, minor: true },
+];
+// what a number in a progression means: [semitones above the key note, kind of chord]
+const DEGREES = {
+  major: { 1: [0, ""], 2: [2, "m"], 3: [4, "m"], 4: [5, ""], 5: [7, ""], 6: [9, "m"], 7: [10, ""] },
+  minor: { 1: [0, "m"], 3: [3, ""], 4: [5, "m"], 5: [7, "7"], 6: [8, ""], 7: [10, ""] },
+};
+const CHORD_TONES = { "": [0, 4, 7], "m": [0, 3, 7], "7": [0, 4, 7, 10] };
+// five notes that sound right over every chord in the key: the soloist's friend
+const PENTATONIC = { major: [0, 2, 4, 7, 9], minor: [0, 3, 5, 7, 10] };
+// The usual suspects. A verse sits at home, a chorus opens on the IV (or the VI
+// in a minor key), a bridge goes somewhere else and ends wanting to come back.
+const PROGRESSIONS = {
+  major: {
+    verse: ["11411151", "14151451", "11441155", "15641564", "16451645", "14111455", "11411511"],
+    chorus: ["41514155", "44115511", "41564151", "45164511", "15641541", "41414155"],
+    bridge: ["66441155", "64156455", "44112255", "74117455", "36453645"],
+  },
+  minor: {
+    verse: ["11671171", "17671767", "11411151", "16371637", "17116711"],
+    chorus: ["67116711", "37113765", "63716375", "37613751"],
+    bridge: ["44114455", "66774455", "33776655"],
+  },
+};
+const FORMS = ["VCVCBC", "VVCVCBC", "VCVBCC", "VCVCBVC"];
+
+// Where the fingers go, lowest string first (-1: leave it out). The shapes everybody
+// learns first where there is one, and a barre chord where there isn't.
+const GUITAR = [40, 45, 50, 55, 59, 64];
+const SHAPES = {
+  "G": [3, 2, 0, 0, 0, 3], "C": [-1, 3, 2, 0, 1, 0], "D": [-1, -1, 0, 2, 3, 2], "Dm": [-1, -1, 0, 2, 3, 1],
+  "B7": [-1, 2, 1, 2, 0, 2], "E7": [0, 2, 0, 1, 0, 0],
+};
+function makeChord(pc, kind) {
+  const name = PITCHES[pc] + kind;
+  let frets = SHAPES[name];
+  if (!frets) {
+    const e = (pc + 8) % 12, a = (pc + 3) % 12;       // the fret where the 6th or the 5th string plays this note
+    frets = e <= a
+      ? [e, e + 2, kind === "7" ? e : e + 2, e + (kind === "m" ? 0 : 1), e, e]             // an E shape, moved up
+      : [-1, a, a + 2, kind === "7" ? a : a + 2, a + (kind === "m" ? 1 : 2), a];           // an A shape, moved up
+  }
+  const notes = frets.map((f, i) => f < 0 ? null : GUITAR[i] + f).filter(m => m != null);
+  const root = notes[0];
+  return {
+    name, pc, kind, notes, root,
+    fifth: root - 5 >= GUITAR[0] ? root - 5 : root + 7,      // the other bass note: the fifth below, if the guitar goes that low
+    tones: CHORD_TONES[kind].map(t => (pc + t) % 12),
+  };
+}
+
+// keyId: one of KEYS, or nothing to let the seed choose. The same seed in another
+// key is the same song, moved.
+function makeSong(seed, keyId) {
+  const random = seeded((seed ^ 0x50c6) >>> 0);
+  const r = [random(), random(), random(), random(), random()];
+  const key = KEYS.find(k => k.id === keyId) || KEYS[Math.floor(r[0] * KEYS.length)];
+  const mode = key.minor ? "minor" : "major";
+  const bank = PROGRESSIONS[mode];
+  const verse = bank.verse[Math.floor(r[1] * bank.verse.length)];
+  let chorus = bank.chorus[Math.floor(r[2] * bank.chorus.length)];
+  if (chorus.slice(0, 4) === verse.slice(0, 4)) chorus = bank.chorus[0];     // a chorus should sound like a change
+  const bridge = bank.bridge[Math.floor(r[3] * bank.bridge.length)];
+  const form = FORMS[Math.floor(r[4] * FORMS.length)];
+
+  const made = {};
+  const chords = digits => [...digits].map(d => {
+    const [up, kind] = DEGREES[mode][d];
+    const pc = (key.tonic + up) % 12;
+    return made[pc + kind] || (made[pc + kind] = makeChord(pc, kind));
+  });
+  const parts = { V: ["verse", "Verse", verse], C: ["chorus", "Chorus", chorus], B: ["bridge", "Bridge", bridge] };
+  const sections = [{ kind: "intro", name: "Intro", label: "Intro", chords: chords(verse.slice(4)) }];
+  let verses = 0;
+  for (const letter of form) {
+    const [kind, name, digits] = parts[letter];
+    sections.push({ kind, name, label: kind === "verse" ? "Verse " + (++verses) : name, chords: chords(digits) });
+  }
+  sections.push({ kind: "end", name: "End", label: "Ending", chords: chords("451") });
+
+  const bars = [];
+  sections.forEach((sec, s) => {
+    sec.at = bars.length;
+    sec.chords.forEach((chord, i) => bars.push({ s, i, chord }));
+  });
+  return {
+    key, mode, sections, bars,
+    loopAt: sections[1].at,                          // where "repeat" goes back to: the first verse
+    endAt: sections[sections.length - 1].at,
+    scale: PENTATONIC[mode].map(t => (key.tonic + t) % 12),
+    keyName: PITCHES[key.tonic] + (key.minor ? " minor" : ""),
+  };
+}
+
+// "0:b 4:d 8:a" -> what the guitar does on each step of a bar
+function strumPlan(text, steps) {
+  const plan = new Array(steps).fill("");
+  text.split(" ").forEach(part => { const [at, stroke] = part.split(":"); plan[+at] = stroke; });
+  return plan;
+}
+STYLES.forEach(style => { style.plans = style.strums.map(text => strumPlan(text, style.steps)); });
+// </song>
+
 /* ------------------------------- app state --------------------------------- */
 
 const grid = $("grid"), playBtn = $("playBtn"), newBeatBtn = $("newBeatBtn");
-const tempoSlider = $("tempo"), swingSlider = $("swing"), volumeSlider = $("volume");
+const tempoSlider = $("tempo"), swingSlider = $("swing"), volumeSlider = $("volume"), guitarSlider = $("guitar");
 
 // little things worth remembering between visits
-let prefs = { tab: "drum", tuning: "guitar", volume: 80, countIn: true, fills: true, last: "" };
+let prefs = { tab: "drum", tuning: "guitar", volume: 80, guitar: 70, countIn: true, fills: true, repeat: false, key: "any", last: "" };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem("porch") || "{}")); } catch (e) {}
 function savePrefs() { try { localStorage.setItem("porch", JSON.stringify(prefs)); } catch (e) {} }
 
-let pattern = null;          // { style, seed, title, story, steps, perBeat, cells: {instId: [..]} }
+let pattern = null;          // { style, seed, title, story, steps, perBeat, cells: {instId: [..]}, key, song }
+let cue = 0;                 // the part of the song Play starts from
 let muted = {};
 let cellEls = [];            // [instIdx][step] -> element
 let rulerEls = [];
@@ -956,12 +1223,14 @@ function makeBeat(styleId, seed) {
 
 // A beat fits in a link: style.seed.tempo.swing.rows (each row is a base-3 number, in base 36).
 // The seed brings back the name and the story; the rows carry whatever you changed by hand.
+// A song adds its key on the end; the seed brings back its chords.
 function encodeBeat() {
   const rows = INSTRUMENTS.map(inst => parseInt(pattern.cells[inst.id].join(""), 3).toString(36));
-  return [pattern.style.id, pattern.seed.toString(36), tempoSlider.value, swingSlider.value, rows.join("-")].join(".");
+  return [pattern.style.id, pattern.seed.toString(36), tempoSlider.value, swingSlider.value, rows.join("-")]
+    .concat(pattern.key || []).join(".");
 }
 function decodeBeat(text) {
-  const [styleId, seed, tempo, swing, rows] = String(text).replace(/^#/, "").split(".");
+  const [styleId, seed, tempo, swing, rows, key] = String(text).replace(/^#/, "").split(".");
   if (!STYLES.some(s => s.id === styleId) || !/^[0-9a-z]{1,7}$/.test(seed || "")) return null;
   const beat = makeBeat(styleId, parseInt(seed, 36));
   if (tempo >= 40 && tempo <= 200) beat.tempo = Math.round(tempo);
@@ -973,6 +1242,7 @@ function decodeBeat(text) {
       if (digits.length === beat.steps) beat.cells[inst.id] = digits.split("").map(Number);
     });
   }
+  if (KEYS.some(k => k.id === key)) beat.key = key;
   return beat;
 }
 
@@ -982,6 +1252,9 @@ function setBeat(beat) {
   swingSlider.value = beat.swing;
   muted = {};
   if (step >= pattern.steps) step = 0;      // a 4/4 playhead can be past the end of a waltz
+  cue = 0;
+  composeSong();
+  if (isPlaying && pattern.song) { step = 0; bar = 0; }     // a new song starts from the top
   $("beatName").textContent = "“" + pattern.title + "”";
   $("beatStory").textContent = pattern.story;
   $("strumHint").textContent = pattern.style.strum;
@@ -991,7 +1264,28 @@ function setBeat(beat) {
   remember();
 }
 
-function newBeat() { setBeat(makeBeat(selectedStyleId)); }
+function newBeat() {
+  const beat = makeBeat(selectedStyleId);
+  if (pattern && pattern.song) beat.key = prefs.key;
+  setBeat(beat);
+}
+
+// Give the beat its chords, in pattern.key (or take them away), and show the result.
+// A key that isn't one ("any") leaves the choice to the seed.
+function composeSong() {
+  pattern.song = pattern.key ? makeSong(pattern.seed, pattern.key) : null;
+  pattern.key = pattern.song ? pattern.song.key.id : null;
+  buildSong();
+}
+
+function setSong(on) {                      // "just a beat" or "a whole song"
+  if (!!pattern.song === on) return;
+  stopPlaying();
+  pattern.key = on ? prefs.key : null;
+  cue = 0;
+  composeSong();
+  remember();
+}
 
 // keep the address bar pointing at this exact beat
 function remember() {
@@ -1005,6 +1299,7 @@ function updateOutputs() {
   $("tempoOut").textContent = tempoSlider.value;
   $("swingOut").textContent = swingSlider.value + "%";
   $("volumeOut").textContent = volumeSlider.value;
+  $("guitarOut").textContent = guitarSlider.value;
   if (pattern) $("beatMeta").textContent = pattern.style.name + " · " + pattern.style.meterLabel + " · " + tempoSlider.value + " bpm";
 }
 
@@ -1108,7 +1403,7 @@ let isPlaying = false;
 let step = 0, bar = 0;
 let nextTime = 0;
 let schedulerTimer = null;
-let session = null;          // this run's own volume knob, so Stop can hush notes already booked
+let session = null;          // this run's own volume knobs { drums, guitar }, so Stop can hush notes already booked
 let drawQueue = [];
 let lastDrawn = null;
 let stats = { steps: 0, late: 0, worstLate: 0 };   // for the tests: did any note get booked after its time?
@@ -1127,6 +1422,24 @@ let fill = { bar: -1, shape: FILLS[0] };
 
 function stepDuration() { return 60 / Number(tempoSlider.value) / pattern.perBeat; }
 
+// The bar after this one. A song can start part-way in, and can go round again
+// (back to the first verse) instead of ending.
+function nextBar(bar) {
+  const song = pattern.song;
+  if (!song) return bar + 1;
+  if (bar < 0) return song.sections[cue].at;
+  if (prefs.repeat && bar + 1 === song.endAt) return song.loopAt;
+  return bar + 1;
+}
+
+// In a beat every fourth bar ends with a fill. In a song the last bar of each part does.
+function fillsIn(bar) {
+  const song = pattern.song;
+  if (!song) return bar % 4 === 3;
+  const next = song.bars[nextBar(bar)];
+  return !!next && (next.s !== song.bars[bar].s || nextBar(bar) === song.bars.length - 1);
+}
+
 // what sounds on this step: [[instrument id, velocity], ...]
 function hitsAt(bar, step) {
   const out = [];
@@ -1135,7 +1448,11 @@ function hitsAt(bar, step) {
     if (step % every === 0) out.push(["stick", step % pattern.perBeat === 0 ? 1.15 : 0.75]);
     return out;
   }
-  const filling = prefs.fills && bar % 4 === 3 && step >= pattern.steps - FILL_LEN;
+  if (pattern.song && bar >= pattern.song.bars.length - 1) {     // the last bar of a song: one hit, and let it ring
+    if (step === 0) [["kick", 1.15], ["tamb", 0.9]].forEach(hit => { if (!muted[hit[0]]) out.push(hit); });
+    return out;
+  }
+  const filling = prefs.fills && fillsIn(bar) && step >= pattern.steps - FILL_LEN;
   if (filling) {
     if (fill.bar !== bar) {
       const shapes = pattern.style.swingEighths ? FILLS.slice(4) : FILLS;
@@ -1162,13 +1479,60 @@ function swingDelay(step) {
   return step % 2 === 1 ? amt * dur * 0.85 : 0;
 }
 
-function scheduleStep(bar, step, time, k, out) {
+// how each part of a song is played: [how hard, which of the style's strums]
+const FEEL = { intro: [0.85, 0], verse: [0.9, 0], chorus: [1.05, 1], bridge: [0.8, 2], end: [1, 1] };
+
+// One stroke of the guitar player's hand.
+//   b  the chord's bass note        a  its other bass note (the "boom" of the next boom-chick)
+//   d  down across the top strings  u  back up across the top three
+//   D  the whole chord, slowly      1 2 3  one string, picked (1 is the highest)
+// k.fretted remembers what is ringing, so the hand can stop a string before playing it again.
+function strumChord(k, chord, stroke, t, vel, out) {
+  const ring = k.fretted || (k.fretted = { picks: {} });
+  const hush = (...hands) => hands.forEach(hand => hand && hand.damp(t));
+  if (ring.chord !== chord) {                                // a new chord: the fingers lift off the old one
+    [ring.bass, ring.strum, ...Object.values(ring.picks)].forEach(hand => hand && hand.damp(t - 0.02));
+    k.fretted = { chord, picks: {} };
+    return strumChord(k, chord, stroke, t, vel, out);
+  }
+  const notes = chord.notes;
+  if (stroke === "b" || stroke === "a") {
+    hush(ring.bass);
+    ring.bass = k.strum([stroke === "b" ? chord.root : chord.fifth], t, { vel, out });
+  } else if (stroke > "0" && stroke < "4") {
+    const m = notes[notes.length - stroke];
+    hush(ring.picks[m]);
+    ring.picks[m] = k.strum([m], t, { vel: vel * 0.95, out });
+  } else {
+    hush(ring.strum, ...Object.values(ring.picks));
+    ring.picks = {};
+    if (stroke === "d") ring.strum = k.strum(notes.slice(-4), t, { vel: vel * 0.8, gap: 0.013, out });
+    else if (stroke === "u") ring.strum = k.strum(notes.slice(-3).reverse(), t, { vel: vel * 0.5, gap: 0.009, out });
+    else {
+      hush(ring.bass);
+      ring.bass = null;
+      ring.strum = k.strum(notes, t, { vel, gap: stroke === "E" ? 0.035 : 0.02, out });     // E: the last chord of the song
+    }
+  }
+}
+
+// out: { drums, guitar } to play through, or nothing for the kit's own
+function scheduleStep(bar, step, time, k, out = {}) {
   const t = time + swingDelay(step);
+  const song = pattern.song;
+  const at = song && song.bars[bar];
+  const [push, plan] = at ? FEEL[song.sections[at.s].kind] : [1, 0];
   const hits = hitsAt(bar, step);
   hits.forEach(([id, vel]) => {
-    const jitter = step === 0 ? 0 : (Math.random() - 0.5) * 0.004;      // humanize the timing
-    k.play[id](t + jitter, vel * (0.94 + Math.random() * 0.12), out);   // and the touch
+    const jitter = step === 0 ? 0 : (Math.random() - 0.5) * 0.004;                    // humanize the timing
+    k.play[id](t + jitter, vel * push * (0.94 + Math.random() * 0.12), out.drums);    // and the touch
   });
+  if (at) {
+    const last = bar === song.bars.length - 1;
+    const stroke = last ? (step === 0 ? "E" : "") : pattern.style.plans[plan][step];
+    const jitter = step === 0 ? 0 : (Math.random() - 0.5) * 0.006;
+    if (stroke) strumChord(k, at.chord, stroke, t + jitter, push * (0.92 + Math.random() * 0.16), out.guitar);
+  }
   return { bar, step, time: t, ghosts: hits.filter(h => h[2]).map(h => h[0]) };
 }
 
@@ -1178,11 +1542,15 @@ function scheduler() {
   // a hidden tab only gets a timer about once a second, so book further ahead there
   const until = now + (document.hidden ? 1.6 : 0.12);
   while (nextTime < until) {
+    if (pattern.song && bar >= pattern.song.bars.length) {     // the song is over: let the last chord ring, then stop
+      if (now > nextTime - 0.1) { cue = 0; stopPlaying(true); }
+      return;
+    }
     stats.steps++;
     if (nextTime < now) { stats.late++; stats.worstLate = Math.max(stats.worstLate, now - nextTime); }
     drawQueue.push(scheduleStep(bar, step, nextTime, kit, session));
     nextTime += stepDuration();
-    if (++step >= pattern.steps) { step = 0; bar++; }
+    if (++step >= pattern.steps) { step = 0; bar = nextBar(bar); }
   }
 }
 
@@ -1214,6 +1582,7 @@ function drawStep(ev) {
     if (row && row[ev.step]) row[ev.step].classList.add("ghost");
   });
   drawBars(ev.bar, ev.step);
+  showSong(ev.bar, ev.step);
 }
 
 function drawPlayhead() {
@@ -1224,15 +1593,21 @@ function drawPlayhead() {
   if (latest) drawStep(latest);
 }
 
-function startPlaying() {
+function startPlaying(countIn = prefs.countIn) {
   ensureAudio();
   stopTuner();
   audioSession("playback");
   isPlaying = true;
   step = 0;
-  bar = prefs.countIn ? -1 : 0;
-  session = ac.createGain();
-  session.connect(kit.bus);
+  bar = countIn ? -1 : nextBar(-1);
+  session = { drums: ac.createGain(), guitar: ac.createGain() };
+  session.drums.connect(kit.bus);
+  session.guitar.connect(kit.guitar);
+  if (pattern.song) {                                   // make the strings now, not in the middle of a bar
+    pattern.song.bars.forEach(({ chord }) => chord.notes.concat(chord.fifth).forEach(kit.string));
+    showSong(bar, 0);
+    showSongCard();
+  }
   nextTime = ac.currentTime + 0.06;
   drawQueue = [];
   schedulerTimer = setInterval(scheduler, 25);
@@ -1242,22 +1617,29 @@ function startPlaying() {
   refresh();
 }
 
-function stopPlaying() {
+function stopPlaying(ringOut) {
   if (!isPlaying) return;
   isPlaying = false;
   clearInterval(schedulerTimer);
   const old = session;
-  old.gain.setTargetAtTime(0, ac.currentTime, 0.012);
-  setTimeout(() => old.disconnect(), 2500);
+  if (ringOut !== true) [old.drums, old.guitar].forEach(g => g.gain.setTargetAtTime(0, ac.currentTime, 0.012));
+  setTimeout(() => { old.drums.disconnect(); old.guitar.disconnect(); }, 2500);
   drawQueue = [];
   drawStep(null);
   drawBars(-9, 0);
+  showSong(null);
   playBtn.textContent = "▶ Play";
   playBtn.classList.remove("playing");
   refresh();
 }
 
 function togglePlay() { if (isPlaying) stopPlaying(); else startPlaying(); }
+
+// start again from another part of the song
+function playFrom(s) {
+  cue = s;
+  if (isPlaying) { stopPlaying(); startPlaying(false); } else showSong(null);
+}
 
 // tap along on the tempo number to set it
 let taps = [];
@@ -1273,13 +1655,151 @@ function tapTempo() {
   remember();
 }
 
+/* --------------------------------- song ui --------------------------------- */
+// Where you are in the song, which chord is under you, and the notes that will
+// sound right over it if you'd rather play a tune than strum.
+
+const songCard = $("songCard"), roadmap = $("roadmap"), chart = $("chart"), neck = $("neck");
+let shown = {};              // what the song card says now, so only what changed is redrawn
+
+function buildSong() {
+  const song = pattern.song;
+  document.querySelectorAll(".song-only").forEach(el => { el.hidden = !song; });
+  songCard.hidden = !song;
+  $("bars").hidden = $("strumHint").hidden = !!song;     // the page is strumming now; you get the chords instead
+  [...$("modeSwitch").children].forEach(b => b.setAttribute("aria-pressed", (b.dataset.mode === "song") === !!song));
+  newBeatBtn.lastChild.textContent = song ? " New song" : " New beat";
+  const key = prefs.key === "any" ? "any" : pattern.key;
+  [...$("keyChips").children].forEach(c => c.classList.toggle("selected", c.dataset.id === key));
+  if (!song) return;
+  $("songKey").textContent = "key of " + song.keyName;
+  roadmap.innerHTML = "";
+  song.sections.forEach((sec, n) => {
+    const b = roadmap.appendChild(document.createElement("button"));
+    b.textContent = sec.kind === "verse" ? sec.label : sec.name;
+    b.title = "Play from here";
+    b.addEventListener("click", () => playFrom(n));
+  });
+  buildNeck();
+  shown = {};
+  if (lastDrawn) showSong(lastDrawn.bar, lastDrawn.step); else showSong(null);
+}
+
+// The neck of whatever the tuner is set to, with the five notes that fit the
+// whole song. The current chord's own notes light up as it comes round.
+function buildNeck() {
+  const song = pattern.song;
+  const strings = tuning.frets || (tuning.notes.length ? tuning.notes : TUNINGS[0].notes);
+  neck.innerHTML = "";
+  [...strings].reverse().forEach(open => {                   // highest string on top, the way tab is written
+    for (let fret = 0; fret <= 12; fret++) {
+      const pc = (open + fret) % 12;
+      const dot = document.createElement("span");
+      dot.className = "dot" + (song.scale.includes(pc) ? " scale" : "") + (pc === song.key.tonic ? " home" : "");
+      dot.dataset.pc = pc;
+      dot.textContent = PITCHES[pc];
+      const cell = neck.appendChild(document.createElement("div"));
+      cell.className = fret ? "fret" : "fret open";
+      cell.appendChild(dot);
+    }
+  });
+  for (let fret = 0; fret <= 12; fret++) {
+    const num = neck.appendChild(document.createElement("div"));
+    num.className = "num";
+    if ([3, 5, 7, 9, 12].includes(fret)) num.textContent = fret;
+  }
+  const names = song.scale.map(pc => PITCHES[pc]).join(" ");
+  const whose = tuning.frets || tuning.notes.length ? tuning.name.toLowerCase() : "guitar";
+  $("soloTip").innerHTML = "To solo: <b>" + song.keyName + (song.key.minor ? "" : " major") + " pentatonic</b> · " + names
+    + (whose === "guitar" ? "" : " <small>(" + whose + " neck)</small>");
+  shown.chord = null;
+}
+
+function clock(seconds) {
+  return Math.floor(seconds / 60) + ":" + String(Math.round(seconds) % 60).padStart(2, "0");
+}
+
+// bar: the bar you're hearing (-1 is the count-in), or null when nothing is playing
+function showSong(bar, step) {
+  const song = pattern.song;
+  if (!song) return;
+  const counting = isPlaying && bar === -1;
+  const playing = isPlaying && bar != null && !!song.bars[bar];
+  const at = playing ? bar : song.sections[cue].at;
+  const { s, i, chord } = song.bars[at];
+  const sec = song.sections[s];
+
+  const state = [at, playing, counting, cue, prefs.repeat, tempoSlider.value].join();
+  if (shown.state !== state) {
+    shown.state = state;
+    if (shown.s !== s) {
+      shown.s = s;
+      chart.innerHTML = "";
+      // a short part leaves room to show how the next one starts
+      const after = song.sections[s + 1], ahead = after && sec.chords.length <= 4 ? after.chords.slice(0, 4) : [];
+      sec.chords.concat(ahead).forEach(c => { chart.appendChild(document.createElement("div")).textContent = c.name; });
+    }
+    [...chart.children].forEach((el, n) => {
+      el.className = n >= sec.chords.length ? "ahead" : !playing ? "" : n < i ? "done" : n === i ? "now" : "";
+    });
+    [...roadmap.children].forEach((b, n) => { b.className = playing ? (n === s ? "now" : "") : n === cue ? "cue" : ""; });
+    const here = roadmap.children[s];
+    roadmap.scrollTo({ left: here.offsetLeft - (roadmap.clientWidth - here.offsetWidth) / 2, behavior: "smooth" });
+
+    let where = sec.label + " · bar " + (i + 1) + " of " + sec.chords.length;
+    if (counting) where = "Count-in";
+    else if (!playing) {
+      const left = prefs.repeat ? 0 : song.bars.length - at;
+      where = (cue ? "From " + sec.label.toLowerCase() : song.bars.length + " bars")
+        + " · " + (left ? clock(left * pattern.steps * stepDuration()) : "round and round");
+    }
+    $("songWhere").textContent = where;
+    $("chordNow").textContent = chord.name;
+
+    // the next chord that isn't this one, and how long until it comes
+    let next = null, bars = 0;
+    for (let b = nextBar(at); song.bars[b] && ++bars < 40; b = nextBar(b)) {
+      if (song.bars[b].chord !== chord) { next = song.bars[b].chord; break; }
+    }
+    const el = $("chordNext");
+    el.className = counting ? "chord-next count" : "chord-next";
+    el.textContent = "";
+    if (counting) el.appendChild(document.createElement("b"));
+    else if (next) {
+      el.append("then ");
+      el.appendChild(document.createElement("b")).textContent = next.name;
+      el.appendChild(document.createElement("small")).textContent = bars === 1 ? "next bar" : "in " + bars + " bars";
+    } else el.appendChild(document.createElement("small")).textContent = at === song.bars.length - 1 ? "the end" : "to the end";
+  }
+  if (shown.chord !== chord) {
+    shown.chord = chord;
+    neck.querySelectorAll(".dot").forEach(dot => {
+      const pc = +dot.dataset.pc;
+      dot.classList.toggle("tone", chord.tones.includes(pc));
+      dot.classList.toggle("root", pc === chord.pc);
+    });
+  }
+  if (counting) {
+    const every = pattern.perBeat === 6 ? 2 : pattern.perBeat;
+    $("chordNext").firstChild.textContent = Math.floor(step / every) + 1;
+  }
+  if (playing) chart.children[i].style.setProperty("--p", (step + 1) / pattern.steps * 100 + "%");
+}
+
+// On a phone the song card can start below the fold. Bring it up, and keep Stop in reach.
+function showSongCard() {
+  const low = innerHeight - ($("tabs").offsetHeight || 0);
+  if (songCard.getBoundingClientRect().bottom <= low) return;
+  window.scrollTo({ top: scrollY + playBtn.getBoundingClientRect().top - 10, behavior: "smooth" });
+}
+
 /* ---------------------------------- tuner ---------------------------------- */
 
 const TUNINGS = [
   { id: "guitar",   name: "Guitar",            notes: [40, 45, 50, 55, 59, 64] },
-  { id: "ukulele",  name: "Ukulele",           notes: [60, 64, 67, 69] },
+  { id: "ukulele",  name: "Ukulele",           notes: [60, 64, 67, 69], frets: [67, 60, 64, 69] },   // frets: the strings in the order they sit on the neck
   { id: "mandolin", name: "Mandolin · Fiddle", notes: [55, 62, 69, 76] },
-  { id: "banjo",    name: "Banjo",             notes: [50, 55, 59, 62, 67] },
+  { id: "banjo",    name: "Banjo",             notes: [50, 55, 59, 62, 67], frets: [50, 55, 59, 62] },   // (the short fifth string is a drone)
   { id: "bass",     name: "Bass",              notes: [28, 33, 38, 43], long: true },   // low notes need a longer listen
   { id: "any",      name: "Any note",          notes: [] },
 ];
@@ -1311,6 +1831,7 @@ function setTuning(t) {
   [...$("tuningChips").children].forEach(c => c.classList.toggle("selected", c.dataset.id === t.id));
   buildStrings();
   showIdle();
+  if (pattern && pattern.song) { buildNeck(); showSong(lastDrawn ? lastDrawn.bar : null, lastDrawn ? lastDrawn.step : 0); }
 }
 
 // The strings sit along a ruler where distance is pitch, and a bead slides along
@@ -1690,11 +2211,12 @@ $("shareBtn").addEventListener("click", async () => {
     try { await navigator.share({ title: "Porch", text: "“" + pattern.title + "”, " + pattern.story, url }); } catch (e) {}
     return;
   }
-  try { await navigator.clipboard.writeText(url); toast("Link to this beat copied"); }
-  catch (e) { toast("The address bar holds a link to this beat"); }
+  const what = pattern.song ? "song" : "beat";
+  try { await navigator.clipboard.writeText(url); toast("Link to this " + what + " copied"); }
+  catch (e) { toast("The address bar holds a link to this " + what); }
 });
 
-tempoSlider.addEventListener("input", updateOutputs);
+tempoSlider.addEventListener("input", () => { updateOutputs(); if (!isPlaying) showSong(null); });
 swingSlider.addEventListener("input", updateOutputs);
 tempoSlider.addEventListener("change", remember);
 swingSlider.addEventListener("change", remember);
@@ -1706,6 +2228,17 @@ volumeSlider.addEventListener("input", () => {
   if (kit) kit.master.gain.setTargetAtTime(volumeToGain(volumeSlider.value), ac.currentTime, 0.02);
 });
 
+guitarSlider.addEventListener("input", () => {
+  updateOutputs();
+  prefs.guitar = Number(guitarSlider.value);
+  savePrefs();
+  if (kit) kit.guitar.gain.setTargetAtTime(guitarToGain(guitarSlider.value), ac.currentTime, 0.02);
+});
+$("modeSwitch").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (b) setSong(b.dataset.mode === "song");
+});
+
 function wireToggle(id, key) {
   const btn = $(id);
   btn.setAttribute("aria-pressed", prefs[key]);
@@ -1713,11 +2246,12 @@ function wireToggle(id, key) {
     prefs[key] = !prefs[key];
     btn.setAttribute("aria-pressed", prefs[key]);
     savePrefs();
-    if (!isPlaying) drawBars(-9, 0);
+    if (!isPlaying) { drawBars(-9, 0); showSong(null); }
   });
 }
 wireToggle("countInBtn", "countIn");
 wireToggle("fillsBtn", "fills");
+wireToggle("repeatBtn", "repeat");
 
 [{ id: "surprise", name: "Surprise me" }].concat(STYLES).forEach(def => {
   const chip = document.createElement("button");
@@ -1729,6 +2263,20 @@ wireToggle("fillsBtn", "fills");
     newBeat();
   });
   $("styleChips").appendChild(chip);
+});
+// the same song in another key: the chords move, the shape of the song stays
+[{ id: "any", name: "Any key" }].concat(KEYS).forEach(def => {
+  const chip = document.createElement("button");
+  chip.className = "chip";
+  chip.dataset.id = def.id;
+  chip.textContent = def.name || def.id;
+  chip.addEventListener("click", () => {
+    prefs.key = def.id;
+    pattern.key = def.id;
+    composeSong();
+    remember();
+  });
+  $("keyChips").appendChild(chip);
 });
 TUNINGS.forEach(t => {
   const chip = document.createElement("button");
@@ -1778,6 +2326,7 @@ document.addEventListener("keydown", e => {
 /* ---------------------------------- begin ---------------------------------- */
 
 volumeSlider.value = prefs.volume;
+guitarSlider.value = prefs.guitar;
 readInk();
 // a beat from a link, or the one you left, or something friendly to start on
 setBeat(decodeBeat(location.hash) || decodeBeat(prefs.last) || makeBeat("boomchick"));
@@ -1794,7 +2343,8 @@ window.porch = {
   get audio() { return ac; },
   get kit() { return kit; },
   get beat() { return pattern; },
-  makeKit, scheduleStep, stepDuration, decodeBeat, encodeBeat, detect,
+  get bar() { return bar; },
+  makeKit, scheduleStep, nextBar, stepDuration, decodeBeat, encodeBeat, detect,
 };
 </script>
 </body>

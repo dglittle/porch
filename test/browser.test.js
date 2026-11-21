@@ -97,7 +97,7 @@ async function browser(wav, run) {
       // a real tap in the middle of an element: the page sees a user gesture, as it would from a finger
       async tap(selector) {
         const r = await b.evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)});
-          el.scrollIntoView({ block: "nearest" }); const r = el.getBoundingClientRect();
+          el.scrollIntoView({ block: "center", inline: "center" }); const r = el.getBoundingClientRect();
           return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
         for (const type of ["mousePressed", "mouseReleased"]) {
           await send("Input.dispatchMouseEvent", { type, x: r.x, y: r.y, button: "left", clickCount: 1 });
@@ -234,6 +234,134 @@ const LOUDNESS = `(async () => {
       assert(!(await b.evaluate("porch.listening")), "the microphone stayed on after leaving the tuner");
     });
 
+    /* ---- a phone: a whole song, with chords ---- */
+    await browser(wav("a110", 110), async b => {
+      await b.size(390, 844, true);
+      await b.open(url);
+      const text = sel => b.evaluate(`document.querySelector(${JSON.stringify(sel)}).textContent`);
+      assert(await b.evaluate("document.querySelector('#songCard').hidden && document.querySelector('#guitar').hidden"), "song things showing in a plain beat");
+      await b.tap("#modeSwitch [data-mode='song']");
+      const song = await b.evaluate(`(() => { const s = porch.beat.song; return s && { key: s.key.id, bars: s.bars.length,
+        parts: s.sections.map(x => x.label), first: s.bars[0].chord.name }; })()`);
+      console.log("  song:", JSON.stringify(song));
+      assert(song, "no song after asking for one");
+      assert(await b.evaluate("!document.querySelector('#songCard').hidden && document.querySelector('#bars').hidden"));
+      assert(await b.evaluate("document.documentElement.scrollWidth <= innerWidth"), "the song is wider than the phone");
+      assert(await b.evaluate(`location.hash.endsWith(".${song.key}")`), "the link doesn't carry the key");
+      assert.strictEqual(await text("#chordNow"), song.first);
+      assert.strictEqual(await b.evaluate("document.querySelectorAll('#roadmap button').length"), song.parts.length);
+      assert.strictEqual(await text("#newBeatBtn"), "🎲 New song");
+      await b.shot("phone-song");
+
+      await b.tap("#playBtn");
+      await sleep(700);
+      assert(await b.evaluate("document.querySelector('#chordNext.count b') !== null"), "no count-in showing in a song");
+      await sleep(5500);
+      assert(await b.evaluate("porch.playing"), "the song didn't start");
+      const now = await b.evaluate(`(() => { const el = document.querySelector('#chart .now'); return el && { chord: el.textContent,
+        big: document.querySelector('#chordNow').textContent, where: document.querySelector('#songWhere').textContent,
+        lit: document.querySelectorAll('#neck .dot.tone').length, roots: document.querySelectorAll('#neck .dot.root').length,
+        inView: document.querySelector('#songCard').getBoundingClientRect().bottom <= innerHeight }; })()`);
+      console.log("  playing:", JSON.stringify(now));
+      assert(now, "no bar is lit in the chart");
+      assert.strictEqual(now.big, now.chord, "the big chord isn't the one in the chart");
+      assert(/^Intro · bar \d of 4$/.test(now.where), "lost in the song: " + now.where);
+      assert(now.lit >= 6 && now.roots >= 3, "the chord isn't marked on the neck");
+      await b.shot("phone-song-playing");
+      const loud = await b.evaluate(LOUDNESS);
+      assert(loud > 0.05 && loud < 1.5, "the band's level is wrong (peak " + loud + ")");
+
+      // another key while it plays: the same song, moved
+      await b.tap("#keyChips .chip:nth-child(4)");
+      assert.strictEqual(await b.evaluate("porch.beat.song.key.id"), "D");
+      assert.strictEqual(await b.evaluate("porch.beat.song.bars.length"), song.bars);
+      assert(await b.evaluate("porch.playing"), "changing key stopped the song");
+      // jump to the bridge
+      const bridge = song.parts.indexOf("Bridge") + 1;
+      await b.tap(`#roadmap button:nth-child(${bridge})`);
+      await sleep(900);
+      assert(/^Bridge · bar/.test(await text("#songWhere")), "tapping the bridge didn't go there: " + await text("#songWhere"));
+      assert(await b.evaluate(`document.querySelector('#roadmap button:nth-child(${bridge})').classList.contains("now")`));
+      await sleep(2000);
+      await b.shot("phone-song-bridge");
+
+      // the ending: three bars, the last chord rings, and it stops by itself
+      await b.evaluate("(() => { const t = document.querySelector('#tempo'); t.value = 200; t.dispatchEvent(new Event('input')); })()");
+      await b.tap("#roadmap button:last-child");
+      await sleep(1500);
+      assert(/^Ending · bar/.test(await text("#songWhere")), "not in the ending: " + await text("#songWhere"));
+      await sleep(4500);
+      assert(!(await b.evaluate("porch.playing")), "the song never ended");
+      assert(await b.evaluate("document.querySelector('#roadmap button').classList.contains('cue')"), "after the end, Play should start from the top");
+      const stats = await b.evaluate("porch.stats");
+      console.log("  song:", JSON.stringify(stats), "peak", loud.toFixed(2));
+      assert.strictEqual(stats.late, 0, "notes were booked after their time");
+      await sleep(2500);
+      assert((await b.evaluate(LOUDNESS)) < 0.01, "still ringing long after the end");
+
+      // going round again skips the ending
+      assert(await b.evaluate("(s => porch.nextBar(s.endAt - 1) === s.endAt)(porch.beat.song)"));
+      await b.tap("#repeatBtn");
+      assert(await b.evaluate("(s => porch.nextBar(s.endAt - 1) === s.loopAt)(porch.beat.song)"), "repeat doesn't go back to the first verse");
+      await b.tap("#repeatBtn");
+
+      // a song survives its link, and a reload
+      const link = await b.evaluate("porch.encodeBeat()");
+      assert(/\.D$/.test(link), "no key in " + link);
+      const names = "porch.beat.song.bars.map(x => x.chord.name).join(' ')";
+      const chords = await b.evaluate(names);
+      await b.open(url);
+      await sleep(300);
+      assert.strictEqual(await b.evaluate(names), chords, "a reload lost the song");
+      assert.strictEqual(await b.evaluate("document.querySelector('#keyChips .selected').textContent"), "D");
+
+      // the whole band, rendered offline: nothing clips, and the guitar sits with the drums
+      const mix = await b.evaluate(`(async () => {
+        const rate = 48000, dur = porch.stepDuration(), steps = porch.beat.steps, song = porch.beat.song;
+        const bars = [...Array(12).keys(), song.endAt, song.endAt + 1, song.endAt + 2];
+        const out = {};
+        for (const what of ["both", "drums", "guitar"]) {
+          const ctx = new OfflineAudioContext(1, Math.ceil(rate * (dur * steps * bars.length + 2)), rate);
+          const kit = porch.makeKit(ctx, ctx.destination);
+          kit.master.gain.value = 1.1;
+          if (what === "drums") kit.guitar.gain.value = 0;
+          const nowhere = ctx.createGain();
+          bars.forEach((bar, n) => { for (let s = 0; s < steps; s++) {
+            porch.scheduleStep(bar, s, 0.05 + (n * steps + s) * dur, kit, what === "guitar" ? { drums: nowhere } : {}); } });
+          const d = (await ctx.startRendering()).getChannelData(0);
+          let peak = 0, bad = 0, sum = 0;
+          for (const v of d) { if (!isFinite(v)) bad++; peak = Math.max(peak, Math.abs(v)); sum += v * v; }
+          out[what] = { peak: +peak.toFixed(3), rms: +Math.sqrt(sum / d.length).toFixed(4), bad };
+        }
+        return out; })()`);
+      console.log("  offline:", JSON.stringify(mix));
+      assert.strictEqual(mix.both.bad + mix.drums.bad + mix.guitar.bad, 0);
+      assert(mix.both.peak < 1, "the band clips at full volume (peak " + mix.both.peak + ")");
+      const balance = mix.guitar.rms / mix.drums.rms;      // (the kick's low thump counts for more here than it does to an ear)
+      assert(balance > 0.4 && balance < 1.5, "the guitar and the drums are out of balance: " + balance);
+
+      // the guitar's strings are in tune
+      const strings = await b.evaluate(`(async () => {
+        const out = [];
+        for (const m of [40, 43, 47, 50, 55, 59, 62, 66, 71, 76]) {
+          const ctx = new OfflineAudioContext(1, 48000, 48000);
+          const kit = porch.makeKit(ctx, ctx.destination);
+          kit.bus.disconnect(); kit.bus.connect(ctx.destination);
+          kit.strum([m], 0);
+          const d = (await ctx.startRendering()).getChannelData(0);
+          const r = porch.detect(d.subarray(4800, 4800 + 8192), 48000, 25, 1400);
+          out.push(r ? 1200 * Math.log2(r.freq / (440 * Math.pow(2, (m - 69) / 12))) : null);
+        }
+        return out; })()`);
+      console.log("  guitar strings, cents off:", strings.map(c => c == null ? "?" : c.toFixed(1)).join(" "));
+      strings.forEach(c => assert(c != null && Math.abs(c) < 3, "a guitar string is out of tune: " + c));
+
+      // and back to just a beat
+      await b.tap("#modeSwitch [data-mode='beat']");
+      assert(await b.evaluate("!porch.beat.song && document.querySelector('#songCard').hidden && !document.querySelector('#bars').hidden"));
+      assert(await b.evaluate("location.hash.split('.').length === 5"), "a plain beat's link still has a key");
+    });
+
     /* ---- out-of-tune strings read as out of tune, by the right amount ---- */
     const cases = [["low E, 20 cents flat", 40, -20, "E2"], ["high E, 12 cents sharp", 64, 12, "E4"], ["G, 35 cents sharp", 55, 35, "G3"],
       ["plucked D in a noisy room, 8 cents sharp", 50, 8, "D3", true], ["plucked low E, in tune", 40, 0, "E2", true]];
@@ -292,6 +420,13 @@ const LOUDNESS = `(async () => {
       await sleep(1500);
       assert(await b.evaluate("porch.playing && !porch.listening"), "space didn't swap the tuner for the drums");
       await b.shot("laptop-dark-playing");
+      // a link to a song arrives while it plays: the band strikes up
+      await b.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
+      await b.evaluate('location.hash = "#porch.2f7k1.92.12.2qj4-jm8z4-0-0-1v4hs-0.Em"');
+      await sleep(7000);
+      assert(await b.evaluate("porch.playing && porch.beat.song.keyName === 'E minor'"), "a link didn't open its song");
+      assert(await b.evaluate("document.querySelector('#chart .now') !== null"));
+      await b.shot("laptop-song");
     });
 
     console.log("ok");
